@@ -1,0 +1,60 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+model Node {
+  id          String    @id @default(uuid())
+  title       String
+  summary     String?
+  createdAt   DateTime  @default(now())
+  embedding   Unsupported("vector(768)")?
+
+  contents    Content[]
+  edgesFrom   Edge[]    @relation("source")
+  edgesTo     Edge[]    @relation("target")
+}
+
+model Content {
+  id            String      @id @default(uuid())
+  nodeId        String
+  node          Node        @relation(fields: [nodeId], references: [id])
+  type          ContentType
+  text          String?
+  url           String?
+  fileUrl       String?
+  aiGenerated   Boolean     @default(false)
+  editedByUser  Boolean     @default(false)
+  createdAt     DateTime    @default(now())
+
+  generatedNodes Edge[]     @relation("generatedFrom")
+}
+
+enum ContentType {
+  TEXT
+  LINK
+  DOCUMENT
+  AI_GENERATED
+}
+
+model Edge {
+  id                      String    @id @default(uuid())
+  sourceNodeId            String
+  targetNodeId            String
+  source                  Node      @relation("source", fields: [sourceNodeId], references: [id])
+  target                  Node      @relation("target", fields: [targetNodeId], references: [id])
+  generatedFromContentId  String?
+  generatedFromContent    Content?  @relation("generatedFrom", fields: [generatedFromContentId], references: [id])
+  createdAt               DateTime  @default(now())
+}
+
+datasource db {
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  extensions = [vector]
+}
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
+}
