@@ -1,0 +1,6 @@
+-- AlterTable
+ALTER TABLE "Content" DROP COLUMN IF EXISTS "aiGenerated";
+ALTER TABLE "Content" DROP COLUMN IF EXISTS "editedByUser";
+
+-- AlterTable
+ALTER TABLE "Edge" ADD COLUMN IF NOT EXISTS "weight" DOUBLE PRECISION NOT NULL DEFAULT 1;

@@ -1,36 +1,74 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# SynapseWeaver
 
-## Getting Started
+Guided learning through a knowledge graph: start from a few nodes, add content, and (from M2) expand by discovering related topics. The product is **propose → review → confirm** — the user keeps editorial control.
 
-First, run the development server:
+## Overview
+
+Milestone 1 delivers:
+
+- A seeded default graph (study topic: machine learning)
+- Interactive graph view (zoom, pan, drag, click-to-open)
+- Node editing: title/summary plus TEXT, LINK, and DOCUMENT contents
+- Light / dark / system theme via semantic Tailwind tokens
+
+AI generation, dedup, and export land in later milestones.
+
+## Architecture
+
+| Layer | Choice |
+| --- | --- |
+| App | Next.js App Router (UI + API in one project) |
+| UI | React, Tailwind CSS 4, `next-themes`, `react-force-graph-2d` |
+| Data | PostgreSQL + pgvector, Prisma |
+| Files | Stored under `public/uploads/`; DB keeps only `fileUrl` |
+
+Key paths:
+
+- `src/app/api/` — REST for graph, nodes, contents, upload
+- `src/app/graph/`, `src/app/node/[id]/` — graph and node detail
+- `src/lib/db/`, `src/lib/validation/` — Prisma client and Zod schemas
+- `prisma/schema.prisma` — source of truth for the data model
+
+## Setup
+
+### Prerequisites
+
+- Node.js 20+
+- Docker (for local Postgres with pgvector)
+
+### 1. Install
+
+```bash
+npm install
+```
+
+### 2. Environment
+
+```bash
+cp .env.example .env.local
+```
+
+`DATABASE_URL` defaults to the Docker Compose database. `GEMINI_API_KEY` is unused in M1.
+
+### 3. Database
+
+```bash
+docker compose up -d
+npx prisma migrate deploy
+npx prisma db seed
+```
+
+### 4. Run
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000) (redirects to `/graph`).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Design notes
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- **Single implicit graph** — no multi-graph or auth in M1.
+- **Content types** — TEXT / LINK / DOCUMENT are editable; `AI_GENERATED` is reserved for M2+.
+- **Theme** — colors live as CSS variables (`--accent` teal, slate neutrals) so branding can change in one place.
+- **Files** — never stored as blobs in Postgres; only URLs.

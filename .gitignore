@@ -1,8 +1,9 @@
 node_modules/
 .next/
+.env
 .env.local
 .env*.local
 *.log
 .DS_Store
-
-/app/generated/prisma
+public/uploads/*
+!public/uploads/.gitkeep

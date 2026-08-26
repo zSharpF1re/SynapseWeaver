@@ -23,8 +23,6 @@ model Content {
   text          String?
   url           String?
   fileUrl       String?
-  aiGenerated   Boolean     @default(false)
-  editedByUser  Boolean     @default(false)
   createdAt     DateTime    @default(now())
 
   generatedNodes Edge[]     @relation("generatedFrom")
@@ -46,11 +44,11 @@ model Edge {
   generatedFromContentId  String?
   generatedFromContent    Content?  @relation("generatedFrom", fields: [generatedFromContentId], references: [id])
   createdAt               DateTime  @default(now())
+  weight                  Float
 }
 
 datasource db {
   provider   = "postgresql"
-  url        = env("DATABASE_URL")
   extensions = [vector]
 }
 
