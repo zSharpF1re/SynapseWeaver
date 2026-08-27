@@ -12,7 +12,13 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { contentTypeIcons, FontAwesomeIcon } from "@/components/ui/icon";
+import {
+  contentTypeAccent,
+  contentTypeBadge,
+  contentTypeIcons,
+  contentTypeSurface,
+  FontAwesomeIcon,
+} from "@/components/ui/icon";
 import { Input, Label, Textarea } from "@/components/ui/input";
 import type { ContentDto, NodeDetail } from "@/types/graph";
 
@@ -254,9 +260,11 @@ function ContentItem({
   }
 
   return (
-    <Card>
+    <Card className={contentTypeSurface[content.type]}>
       <div className="mb-2 flex items-center justify-between gap-2">
-        <span className="inline-flex items-center gap-1.5 rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
+        <span
+          className={`inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-medium ${contentTypeBadge[content.type]}`}
+        >
           <FontAwesomeIcon icon={contentTypeIcons[content.type]} />
           {content.type}
         </span>
@@ -287,7 +295,7 @@ function ContentItem({
                 href={content.url ?? "#"}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="break-all text-accent hover:underline"
+                className={`break-all hover:underline ${contentTypeAccent.LINK}`}
               >
                 {content.url}
               </a>
@@ -302,7 +310,7 @@ function ContentItem({
                 href={content.fileUrl ?? "#"}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="break-all text-accent hover:underline"
+                className={`break-all hover:underline ${contentTypeAccent.DOCUMENT}`}
               >
                 {content.fileUrl}
               </a>
@@ -482,9 +490,9 @@ function AddLinkForm({
   }
 
   return (
-    <Card>
-      <h3 className="mb-3 inline-flex items-center gap-2 text-sm font-medium">
-        <FontAwesomeIcon icon={faLink} className="text-muted-foreground" />
+    <Card className="surface-link">
+      <h3 className="mb-3 inline-flex items-center gap-2 text-sm font-medium text-link-foreground">
+        <FontAwesomeIcon icon={faLink} />
         Link
       </h3>
       <form onSubmit={submit} className="space-y-3">
@@ -574,9 +582,9 @@ function AddDocumentForm({
   }
 
   return (
-    <Card>
-      <h3 className="mb-3 inline-flex items-center gap-2 text-sm font-medium">
-        <FontAwesomeIcon icon={faFileLines} className="text-muted-foreground" />
+    <Card className="surface-file">
+      <h3 className="mb-3 inline-flex items-center gap-2 text-sm font-medium text-file-foreground">
+        <FontAwesomeIcon icon={faFileLines} />
         Document
       </h3>
       <form onSubmit={submit} className="space-y-3">

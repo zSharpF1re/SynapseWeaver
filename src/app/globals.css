@@ -3,30 +3,48 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 :root {
-  /* #8C1C13 #BF4342 #E7D7C1 #A78A7F #735751 */
-  --background: #e7d7c1;
-  --foreground: #735751;
-  --muted: #ddd0bc;
-  --muted-foreground: #a78a7f;
-  --card: #f3ebe0;
-  --border: #a78a7f;
-  --accent: #bf4342;
-  --accent-foreground: #f3ebe0;
-  --ring: #bf4342;
-  --destructive: #8c1c13;
+  color-scheme: light;
+  /* paper + cobalt */
+  --background: #f6f5f2;
+  --foreground: #1a1916;
+  --muted: #eceae4;
+  --muted-foreground: #6b6860;
+  --card: #fffcf8;
+  --border: #ddd8ce;
+  --accent: #3b5bdb;
+  --accent-foreground: #f5f7ff;
+  --ring: #3b5bdb;
+  --destructive: #d14343;
+
+  /* link — emerald */
+  --link: #e7f6ef;
+  --link-foreground: #0b5344;
+  --link-border: #7ecfb3;
+  /* file — amber */
+  --file: #f8efe2;
+  --file-foreground: #7c4a12;
+  --file-border: #e0c08a;
 }
 
 .dark {
-  --background: #2a1a18;
-  --foreground: #e7d7c1;
-  --muted: #3d2a28;
-  --muted-foreground: #a78a7f;
-  --card: #3a2522;
-  --border: #735751;
-  --accent: #bf4342;
-  --accent-foreground: #f3ebe0;
-  --ring: #bf4342;
-  --destructive: #e07a6a;
+  color-scheme: dark;
+  --background: #101114;
+  --foreground: #eeebe6;
+  --muted: #1a1b21;
+  --muted-foreground: #93949e;
+  --card: #17181e;
+  --border: #2b2d36;
+  --accent: #748ffc;
+  --accent-foreground: #0c0d12;
+  --ring: #748ffc;
+  --destructive: #ff8787;
+
+  --link: #15241f;
+  --link-foreground: #9ee0c6;
+  --link-border: #2f6b56;
+  --file: #241c12;
+  --file-foreground: #ecc994;
+  --file-border: #6b4e28;
 }
 
 @theme inline {
@@ -40,6 +58,12 @@
   --color-accent-foreground: var(--accent-foreground);
   --color-ring: var(--ring);
   --color-destructive: var(--destructive);
+  --color-link: var(--link);
+  --color-link-foreground: var(--link-foreground);
+  --color-link-border: var(--link-border);
+  --color-file: var(--file);
+  --color-file-foreground: var(--file-foreground);
+  --color-file-border: var(--file-border);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
@@ -48,4 +72,14 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-sans), system-ui, sans-serif;
+}
+
+.surface-link {
+  background-color: var(--link);
+  border-color: var(--link-border);
+}
+
+.surface-file {
+  background-color: var(--file);
+  border-color: var(--file-border);
 }

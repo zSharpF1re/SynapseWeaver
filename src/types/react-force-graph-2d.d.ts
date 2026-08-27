@@ -46,7 +46,9 @@ declare module "react-force-graph-2d" {
     enableNodeDrag?: boolean;
     enableZoomInteraction?: boolean;
     enablePanInteraction?: boolean;
-    ref?: MutableRefObject<ForceGraphMethods | undefined>;
+    ref?:
+      | MutableRefObject<ForceGraphMethods | undefined>
+      | ((instance: ForceGraphMethods | null) => void);
   };
 
   const ForceGraph2D: ComponentType<ForceGraphProps>;

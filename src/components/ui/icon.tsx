@@ -17,3 +17,24 @@ export const contentTypeIcons: Record<ContentDto["type"], IconDefinition> = {
   DOCUMENT: faFileLines,
   AI_GENERATED: faWandMagicSparkles,
 };
+
+export const contentTypeSurface: Record<ContentDto["type"], string> = {
+  TEXT: "",
+  LINK: "surface-link",
+  DOCUMENT: "surface-file",
+  AI_GENERATED: "",
+};
+
+export const contentTypeBadge: Record<ContentDto["type"], string> = {
+  TEXT: "bg-muted text-muted-foreground",
+  LINK: "bg-link-border/30 text-link-foreground",
+  DOCUMENT: "bg-file-border/30 text-file-foreground",
+  AI_GENERATED: "bg-muted text-muted-foreground",
+};
+
+export const contentTypeAccent: Record<ContentDto["type"], string> = {
+  TEXT: "text-foreground",
+  LINK: "text-link-foreground",
+  DOCUMENT: "text-file-foreground",
+  AI_GENERATED: "text-muted-foreground",
+};

@@ -8,10 +8,10 @@ export type GraphForceSettings = {
 };
 
 export const DEFAULT_GRAPH_FORCES: GraphForceSettings = {
-  repulsion: 120,
-  minDistance: 18,
-  linkDistance: 100,
-  attraction: 0.4,
+  repulsion: 150,
+  minDistance: 50,
+  linkDistance: 40,
+  attraction: 0.5,
 };
 
 export const GRAPH_FORCES_STORAGE_KEY = "synapseweaver.graphForces";

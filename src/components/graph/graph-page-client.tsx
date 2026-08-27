@@ -16,23 +16,29 @@ export function GraphPageClient() {
   const [showCreate, setShowCreate] = useState(false);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError(null);
+  const load = useCallback(async (opts?: { silent?: boolean }) => {
+    if (!opts?.silent) {
+      setLoading(true);
+      setError(null);
+    }
     try {
       const res = await fetch("/api/graph");
       const body = await res.json();
       if (!res.ok) {
-        setError(body.error ?? "Failed to load graph");
-        setData(null);
+        if (!opts?.silent) {
+          setError(body.error ?? "Failed to load graph");
+          setData(null);
+        }
         return;
       }
       setData(body as GraphPayload);
     } catch {
-      setError("Network error while loading graph");
-      setData(null);
+      if (!opts?.silent) {
+        setError("Network error while loading graph");
+        setData(null);
+      }
     } finally {
-      setLoading(false);
+      if (!opts?.silent) setLoading(false);
     }
   }, []);
 
@@ -122,8 +128,10 @@ export function GraphPageClient() {
           />
           {selectedNodeId && (
             <NodeSidebar
+              key={selectedNodeId}
               nodeId={selectedNodeId}
               onClose={() => setSelectedNodeId(null)}
+              onGraphChanged={() => void load({ silent: true })}
             />
           )}
         </>

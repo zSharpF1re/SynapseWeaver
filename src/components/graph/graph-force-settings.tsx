@@ -35,6 +35,7 @@ export function GraphForceSettingsPanel({
         setOpen(false);
       }
     }
+    
 
     document.addEventListener("mousedown", handlePointerDown, true);
     return () => document.removeEventListener("mousedown", handlePointerDown, true);

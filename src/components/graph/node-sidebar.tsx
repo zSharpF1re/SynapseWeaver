@@ -1,45 +1,92 @@
 "use client";
 
-import { faPen, faXmark } from "@fortawesome/free-solid-svg-icons";
+import { faPen, faWandMagicSparkles, faXmark } from "@fortawesome/free-solid-svg-icons";
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
+import { ExpandProposals } from "@/components/graph/expand-proposals";
 import { Button } from "@/components/ui/button";
-import { contentTypeIcons, FontAwesomeIcon } from "@/components/ui/icon";
-import type { ContentDto, NodeDetail } from "@/types/graph";
+import {
+  contentTypeAccent,
+  contentTypeBadge,
+  contentTypeIcons,
+  contentTypeSurface,
+  FontAwesomeIcon,
+} from "@/components/ui/icon";
+import type { ContentDto, ExpandResponse, NodeDetail } from "@/types/graph";
 
 type NodeSidebarProps = {
   nodeId: string;
   onClose: () => void;
+  onGraphChanged?: () => void;
 };
 
-export function NodeSidebar({ nodeId, onClose }: NodeSidebarProps) {
+export function NodeSidebar({
+  nodeId,
+  onClose,
+  onGraphChanged,
+}: NodeSidebarProps) {
   const [node, setNode] = useState<NodeDetail | null>(null);
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [reloadToken, setReloadToken] = useState(0);
+  const [expanding, setExpanding] = useState(false);
+  const [expandError, setExpandError] = useState<string | null>(null);
+  const [expandResult, setExpandResult] = useState<ExpandResponse | null>(null);
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await fetch(`/api/nodes/${nodeId}`);
-      const body = await res.json();
-      if (!res.ok) {
-        setError(body.error ?? "Failed to load node");
-        setNode(null);
-        return;
-      }
-      setNode(body as NodeDetail);
-    } catch {
-      setError("Network error while loading node");
-      setNode(null);
-    } finally {
-      setLoading(false);
-    }
-  }, [nodeId]);
+  const loading = !error && node?.id !== nodeId;
 
   useEffect(() => {
-    void load();
-  }, [load]);
+    let cancelled = false;
+    void fetch(`/api/nodes/${nodeId}`)
+      .then(async (res) => {
+        const body = await res.json();
+        if (cancelled) return;
+        if (!res.ok) {
+          setError(body.error ?? "Failed to load node");
+          setNode(null);
+          return;
+        }
+        setError(null);
+        setNode(body as NodeDetail);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setError("Network error while loading node");
+        setNode(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [nodeId, reloadToken]);
+
+  function retryLoad() {
+    setNode(null);
+    setError(null);
+    setReloadToken((token) => token + 1);
+  }
+
+  async function handleExpand() {
+    setExpanding(true);
+    setExpandError(null);
+    try {
+      const res = await fetch(`/api/nodes/${nodeId}/expand`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      });
+      const body = await res.json();
+      if (!res.ok) {
+        setExpandError(body.error ?? "Failed to expand node");
+        setExpandResult(null);
+        return;
+      }
+      setExpandResult(body as ExpandResponse);
+    } catch {
+      setExpandError("Network error while expanding node");
+      setExpandResult(null);
+    } finally {
+      setExpanding(false);
+    }
+  }
 
   useEffect(() => {
     function onKey(event: KeyboardEvent) {
@@ -104,7 +151,7 @@ export function NodeSidebar({ nodeId, onClose }: NodeSidebarProps) {
           {error && (
             <div className="space-y-3">
               <p className="text-sm text-destructive">{error}</p>
-              <Button type="button" variant="secondary" onClick={() => void load()}>
+              <Button type="button" variant="secondary" onClick={retryLoad}>
                 Retry
               </Button>
             </div>
@@ -112,6 +159,26 @@ export function NodeSidebar({ nodeId, onClose }: NodeSidebarProps) {
 
           {!loading && !error && node && (
             <div className="space-y-4">
+              {expandError && (
+                <p className="text-sm text-destructive">{expandError}</p>
+              )}
+              {expanding && (
+                <p className="text-sm text-muted-foreground">
+                  Finding related topics…
+                </p>
+              )}
+              {expandResult && (
+                <ExpandProposals
+                  key={expandResult.contentHash}
+                  nodeId={node.id}
+                  result={expandResult}
+                  onDismiss={() => setExpandResult(null)}
+                  onConfirmed={() => {
+                    setExpandResult(null);
+                    onGraphChanged?.();
+                  }}
+                />
+              )}
               {node.contents.length === 0 ? (
                 <p className="text-sm text-muted-foreground">
                   No contents yet.
@@ -130,10 +197,19 @@ export function NodeSidebar({ nodeId, onClose }: NodeSidebarProps) {
         </div>
 
         {node && !error && (
-          <div className="border-t border-border px-4 py-3 flex justify-center">
+          <div className="flex gap-2 border-t border-border px-4 py-3">
+            <Button
+              type="button"
+              className="flex-1"
+              disabled={expanding || loading}
+              onClick={() => void handleExpand()}
+            >
+              <FontAwesomeIcon icon={faWandMagicSparkles} />
+              {expanding ? "Espandi…" : "Espandi"}
+            </Button>
             <Link
               href={`/node/${node.id}`}
-              className="inline-flex w-full max-w-sm items-center justify-center gap-2 rounded-lg bg-accent px-3 py-2 text-sm font-medium text-accent-foreground hover:opacity-90"
+              className="inline-flex flex-1 items-center justify-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-sm font-medium text-foreground hover:bg-muted"
             >
               <FontAwesomeIcon icon={faPen} />
               Modifica
@@ -147,8 +223,12 @@ export function NodeSidebar({ nodeId, onClose }: NodeSidebarProps) {
 
 function ContentPreview({ content }: { content: ContentDto }) {
   return (
-    <div className="rounded-xl border border-border bg-background p-3">
-      <span className="mb-2 inline-flex items-center gap-1.5 rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
+    <div
+      className={`rounded-xl border border-border bg-background p-3 ${contentTypeSurface[content.type]}`}
+    >
+      <span
+        className={`mb-2 inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-medium ${contentTypeBadge[content.type]}`}
+      >
         <FontAwesomeIcon icon={contentTypeIcons[content.type]} />
         {content.type}
       </span>
@@ -162,7 +242,7 @@ function ContentPreview({ content }: { content: ContentDto }) {
               href={content.url ?? "#"}
               target="_blank"
               rel="noopener noreferrer"
-              className="break-all text-accent hover:underline"
+              className={`break-all hover:underline ${contentTypeAccent.LINK}`}
             >
               {content.url}
             </a>
@@ -177,7 +257,7 @@ function ContentPreview({ content }: { content: ContentDto }) {
               href={content.fileUrl ?? "#"}
               target="_blank"
               rel="noopener noreferrer"
-              className="break-all text-accent hover:underline"
+              className={`break-all hover:underline ${contentTypeAccent.DOCUMENT}`}
             >
               {content.fileUrl}
             </a>

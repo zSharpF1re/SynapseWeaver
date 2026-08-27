@@ -31,3 +31,38 @@ export type ContentDto = {
 export type NodeDetail = GraphNode & {
   contents: ContentDto[];
 };
+
+export type ExpandProposalAction = "new" | "link" | "ask";
+
+export type ExpandProposal = {
+  title: string;
+  summary: string;
+  relation: string;
+  action: ExpandProposalAction;
+  existingNodeId?: string;
+  similarity?: number;
+  matchTitle?: string;
+};
+
+export type ExpandResponse = {
+  proposals: ExpandProposal[];
+  contentHash: string;
+  cached: boolean;
+};
+
+export type ConfirmCreatedNode = {
+  id: string;
+  title: string;
+  summary: string | null;
+};
+
+export type ConfirmLinkedEdge = {
+  id: string;
+  sourceNodeId: string;
+  targetNodeId: string;
+};
+
+export type ConfirmResponse = {
+  created: ConfirmCreatedNode[];
+  linked: ConfirmLinkedEdge[];
+};

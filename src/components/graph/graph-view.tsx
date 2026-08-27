@@ -33,12 +33,12 @@ type ThemeColors = {
 function readThemeColors(): ThemeColors {
   const styles = getComputedStyle(document.documentElement);
   return {
-    background: styles.getPropertyValue("--background").trim() || "#f7f8f8",
-    foreground: styles.getPropertyValue("--foreground").trim() || "#0f172a",
-    accent: styles.getPropertyValue("--accent").trim() || "#0d9488",
+    background: styles.getPropertyValue("--background").trim() || "#f6f5f2",
+    foreground: styles.getPropertyValue("--foreground").trim() || "#1a1916",
+    accent: styles.getPropertyValue("--accent").trim() || "#3b5bdb",
     mutedForeground:
-      styles.getPropertyValue("--muted-foreground").trim() || "#64748b",
-    border: styles.getPropertyValue("--border").trim() || "#d9e0e3",
+      styles.getPropertyValue("--muted-foreground").trim() || "#6b6860",
+    border: styles.getPropertyValue("--border").trim() || "#ddd8ce",
   };
 }
 
@@ -74,6 +74,7 @@ export function GraphView({
   const [colors, setColors] = useState<ThemeColors | null>(null);
   const [forces, setForces] = useState<GraphForceSettings>(DEFAULT_GRAPH_FORCES);
   const [forcesReady, setForcesReady] = useState(false);
+  const [graphReady, setGraphReady] = useState(false);
 
   const graphData = useMemo(
     () => ({
@@ -128,36 +129,55 @@ export function GraphView({
     return () => ro.disconnect();
   }, []);
 
+  const bindGraphRef = useCallback((fg: ForceGraphMethods | null) => {
+    fgRef.current = fg ?? undefined;
+    setGraphReady(Boolean(fg));
+  }, []);
+
   const applyForces = useCallback((settings: GraphForceSettings) => {
     const fg = fgRef.current;
-    if (!fg) return;
+    if (!fg) return false;
 
     const charge = fg.d3Force("charge");
-    if (charge?.strength) {
-      charge.strength(-settings.repulsion);
+    const link = fg.d3Force("link");
+    if (!charge?.strength || !link?.distance || !link?.strength) {
+      return false;
     }
 
-    const link = fg.d3Force("link");
-    if (link?.distance) {
-      link.distance(settings.linkDistance);
-    }
-    if (link?.strength) {
-      link.strength(settings.attraction);
-    }
+    charge.strength(-settings.repulsion);
+    link.distance(settings.linkDistance);
+    link.strength(settings.attraction);
 
     const collide = forceCollide(settings.minDistance);
     collide.strength(1);
     fg.d3Force("collide", collide);
 
     fg.d3ReheatSimulation();
+    return true;
   }, []);
 
   useEffect(() => {
-    if (!forcesReady || !colors) return;
-    // Defer so the force-graph instance is mounted and forces exist.
-    const id = window.setTimeout(() => applyForces(forces), 0);
-    return () => window.clearTimeout(id);
-  }, [forces, forcesReady, colors, applyForces, graphData]);
+    if (!graphReady || !forcesReady) return;
+
+    let cancelled = false;
+    let attempts = 0;
+    let raf = 0;
+
+    const tryApply = () => {
+      if (cancelled) return;
+      if (applyForces(forces)) return;
+      attempts += 1;
+      if (attempts < 60) {
+        raf = window.requestAnimationFrame(tryApply);
+      }
+    };
+
+    tryApply();
+    return () => {
+      cancelled = true;
+      window.cancelAnimationFrame(raf);
+    };
+  }, [forces, forcesReady, graphReady, applyForces, graphData]);
 
   const paintNode = useCallback(
     (
@@ -198,7 +218,7 @@ export function GraphView({
     <div ref={containerRef} className="h-full w-full bg-background">
       {colors && (
         <ForceGraph2D
-          ref={fgRef}
+          ref={bindGraphRef}
           width={size.width}
           height={size.height}
           graphData={graphData}
