@@ -2,10 +2,19 @@ import { PrismaClient } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { Pool } from "pg";
 
+/** Bump when the Prisma schema changes so Next.js HMR does not reuse a stale client. */
+const PRISMA_CLIENT_GENERATION = "content-no-url";
+
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
   pgPool: Pool | undefined;
+  prismaGeneration: string | undefined;
 };
+
+if (globalForPrisma.prismaGeneration !== PRISMA_CLIENT_GENERATION) {
+  globalForPrisma.prisma = undefined;
+  globalForPrisma.prismaGeneration = PRISMA_CLIENT_GENERATION;
+}
 
 function createPrismaClient() {
   const connectionString = process.env.DATABASE_URL;

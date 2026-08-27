@@ -4,6 +4,7 @@ import { faPen, faWandMagicSparkles, faXmark } from "@fortawesome/free-solid-svg
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { ExpandProposals } from "@/components/graph/expand-proposals";
+import { RichTextBody } from "@/components/editor/rich-text-viewer";
 import { Button } from "@/components/ui/button";
 import {
   contentTypeAccent,
@@ -226,31 +227,16 @@ function ContentPreview({ content }: { content: ContentDto }) {
     <div
       className={`rounded-xl border border-border bg-background p-3 ${contentTypeSurface[content.type]}`}
     >
-      <span
-        className={`mb-2 inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-medium ${contentTypeBadge[content.type]}`}
-      >
-        <FontAwesomeIcon icon={contentTypeIcons[content.type]} />
-        {content.type}
-      </span>
+      {content.type !== "TEXT" && (
+        <span
+          className={`mb-2 inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-medium ${contentTypeBadge[content.type]}`}
+        >
+          <FontAwesomeIcon icon={contentTypeIcons[content.type]} />
+          {content.type}
+        </span>
+      )}
       <div className="space-y-1 text-sm">
-        {content.type === "TEXT" && (
-          <p className="whitespace-pre-wrap text-foreground">{content.text}</p>
-        )}
-        {content.type === "LINK" && (
-          <>
-            <a
-              href={content.url ?? "#"}
-              target="_blank"
-              rel="noopener noreferrer"
-              className={`break-all hover:underline ${contentTypeAccent.LINK}`}
-            >
-              {content.url}
-            </a>
-            {content.text && (
-              <p className="text-muted-foreground">{content.text}</p>
-            )}
-          </>
-        )}
+        {content.type === "TEXT" && <RichTextBody text={content.text} />}
         {content.type === "DOCUMENT" && (
           <>
             <a
@@ -267,9 +253,7 @@ function ContentPreview({ content }: { content: ContentDto }) {
           </>
         )}
         {content.type === "AI_GENERATED" && (
-          <p className="whitespace-pre-wrap text-muted-foreground">
-            {content.text ?? "(empty)"}
-          </p>
+          <RichTextBody text={content.text} />
         )}
       </div>
     </div>

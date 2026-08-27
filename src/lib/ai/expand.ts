@@ -45,7 +45,6 @@ type NodeWithContents = {
     id: string;
     type: string;
     text: string | null;
-    url: string | null;
     fileUrl: string | null;
   }>;
 };
@@ -60,7 +59,6 @@ export function hashExpandContext(node: NodeWithContents): string {
           id: content.id,
           type: content.type,
           text: content.text,
-          url: content.url,
           fileUrl: content.fileUrl,
         })),
       }),
@@ -72,7 +70,17 @@ export async function loadNodeForExpand(nodeId: string) {
   return prisma.node.findUnique({
     where: { id: nodeId },
     include: {
-      contents: { orderBy: { createdAt: "asc" as const } },
+      contents: {
+        orderBy: { createdAt: "asc" as const },
+        select: {
+          id: true,
+          nodeId: true,
+          type: true,
+          text: true,
+          fileUrl: true,
+          createdAt: true,
+        },
+      },
     },
   });
 }

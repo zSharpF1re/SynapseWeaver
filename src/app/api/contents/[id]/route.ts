@@ -1,6 +1,11 @@
 import { prisma } from "@/lib/db/prisma";
 import { jsonError, jsonOk, parseJsonBody } from "@/lib/api";
-import { updateContentSchema } from "@/lib/validation/contents";
+import { deleteBlobIfPresent } from "@/lib/blob";
+import { contentSelect, toContentDto } from "@/lib/content-dto";
+import {
+  parseTextBody,
+  updateContentSchema,
+} from "@/lib/validation/contents";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -10,7 +15,10 @@ export async function PATCH(request: Request, { params }: Params) {
   if ("error" in parsed) return parsed.error;
 
   try {
-    const existing = await prisma.content.findUnique({ where: { id } });
+    const existing = await prisma.content.findUnique({
+      where: { id },
+      select: contentSelect,
+    });
     if (!existing) {
       return jsonError("Content not found", 404);
     }
@@ -19,46 +27,32 @@ export async function PATCH(request: Request, { params }: Params) {
       return jsonError("AI_GENERATED content cannot be edited in M1", 400);
     }
 
-    if (parsed.data.text !== undefined && existing.type !== "TEXT") {
-      if (existing.type === "LINK" || existing.type === "DOCUMENT") {
-        // optional caption text allowed
-      }
-    }
-
-    if (parsed.data.url !== undefined && existing.type !== "LINK") {
-      return jsonError("url can only be updated on LINK content", 400);
-    }
-
     if (parsed.data.fileUrl !== undefined && existing.type !== "DOCUMENT") {
       return jsonError("fileUrl can only be updated on DOCUMENT content", 400);
     }
 
-    if (existing.type === "TEXT" && parsed.data.text === undefined) {
-      // text updates only; other fields ignored
+    if (parsed.data.text !== undefined && existing.type === "TEXT") {
+      if (parsed.data.text == null) {
+        return jsonError("Text is required", 400);
+      }
+      const body = parseTextBody(parsed.data.text);
+      if (!body.ok) {
+        return jsonError(body.error, 400);
+      }
     }
 
     const content = await prisma.content.update({
       where: { id },
       data: {
         ...(parsed.data.text !== undefined ? { text: parsed.data.text } : {}),
-        ...(parsed.data.url !== undefined && existing.type === "LINK"
-          ? { url: parsed.data.url }
-          : {}),
         ...(parsed.data.fileUrl !== undefined && existing.type === "DOCUMENT"
           ? { fileUrl: parsed.data.fileUrl }
           : {}),
       },
+      select: contentSelect,
     });
 
-    return jsonOk({
-      id: content.id,
-      nodeId: content.nodeId,
-      type: content.type,
-      text: content.text,
-      url: content.url,
-      fileUrl: content.fileUrl,
-      createdAt: content.createdAt.toISOString(),
-    });
+    return jsonOk(toContentDto(content));
   } catch (error) {
     console.error("PATCH /api/contents/[id]", error);
     return jsonError("Failed to update content", 500);
@@ -69,7 +63,10 @@ export async function DELETE(_request: Request, { params }: Params) {
   const { id } = await params;
 
   try {
-    const existing = await prisma.content.findUnique({ where: { id } });
+    const existing = await prisma.content.findUnique({
+      where: { id },
+      select: contentSelect,
+    });
     if (!existing) {
       return jsonError("Content not found", 404);
     }
@@ -79,6 +76,10 @@ export async function DELETE(_request: Request, { params }: Params) {
       data: { generatedFromContentId: null },
     });
     await prisma.content.delete({ where: { id } });
+
+    if (existing.type === "DOCUMENT") {
+      await deleteBlobIfPresent(existing.fileUrl);
+    }
 
     return jsonOk({ ok: true });
   } catch (error) {

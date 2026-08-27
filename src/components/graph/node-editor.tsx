@@ -1,15 +1,15 @@
 "use client";
 
 import {
-  faAlignLeft,
   faArrowLeft,
   faFileLines,
-  faLink,
   faTrash,
 } from "@fortawesome/free-solid-svg-icons";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState, type FormEvent } from "react";
+import { RichTextBody } from "@/components/editor/rich-text-viewer";
+import { RichTextEditor } from "@/components/editor/rich-text-editor";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import {
@@ -20,6 +20,12 @@ import {
   FontAwesomeIcon,
 } from "@/components/ui/icon";
 import { Input, Label, Textarea } from "@/components/ui/input";
+import {
+  coerceDoc,
+  EMPTY_DOC,
+  isEmptyDoc,
+  stringifyDoc,
+} from "@/lib/rich-text";
 import type { ContentDto, NodeDetail } from "@/types/graph";
 
 export function NodeEditor({ nodeId }: { nodeId: string }) {
@@ -177,7 +183,7 @@ export function NodeEditor({ nodeId }: { nodeId: string }) {
         <h2 className="text-base font-semibold">Contents</h2>
         {node.contents.length === 0 ? (
           <p className="text-sm text-muted-foreground">
-            No contents yet. Add text, a link, or a document below.
+            No contents yet. Add text or a document below.
           </p>
         ) : (
           <ul className="space-y-3">
@@ -203,8 +209,11 @@ function ContentItem({
   onChanged: () => void;
 }) {
   const [editing, setEditing] = useState(false);
-  const [text, setText] = useState(content.text ?? "");
-  const [url, setUrl] = useState(content.url ?? "");
+  const [text, setText] = useState(
+    content.type === "TEXT"
+      ? (content.text ?? stringifyDoc(EMPTY_DOC))
+      : (content.text ?? ""),
+  );
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
 
@@ -214,12 +223,8 @@ function ContentItem({
     try {
       const payload: Record<string, string> = {};
       if (content.type === "TEXT") payload.text = text;
-      if (content.type === "LINK") {
-        payload.url = url;
-        if (text.trim()) payload.text = text;
-      }
-      if (content.type === "DOCUMENT" && text.trim()) {
-        payload.text = text;
+      if (content.type === "DOCUMENT") {
+        payload.text = text.trim();
       }
 
       const res = await fetch(`/api/contents/${content.id}`, {
@@ -259,21 +264,36 @@ function ContentItem({
     }
   }
 
+  const canEdit = content.type !== "AI_GENERATED";
+  const textEmpty =
+    content.type === "TEXT" && isEmptyDoc(coerceDoc(text));
+
   return (
     <Card className={contentTypeSurface[content.type]}>
-      <div className="mb-2 flex items-center justify-between gap-2">
-        <span
-          className={`inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-medium ${contentTypeBadge[content.type]}`}
-        >
-          <FontAwesomeIcon icon={contentTypeIcons[content.type]} />
-          {content.type}
-        </span>
+      <div
+        className={`mb-2 flex items-center gap-2 ${content.type === "TEXT" ? "justify-end" : "justify-between"}`}
+      >
+        {content.type !== "TEXT" && (
+          <span
+            className={`inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-medium ${contentTypeBadge[content.type]}`}
+          >
+            <FontAwesomeIcon icon={contentTypeIcons[content.type]} />
+            {content.type}
+          </span>
+        )}
         <div className="flex gap-1">
-          {content.type !== "AI_GENERATED" && (
+          {canEdit && (
             <Button
               type="button"
               variant="ghost"
-              onClick={() => setEditing((v) => !v)}
+              onClick={() => {
+                setText(
+                  content.type === "TEXT"
+                    ? (content.text ?? stringifyDoc(EMPTY_DOC))
+                    : (content.text ?? ""),
+                );
+                setEditing((v) => !v);
+              }}
             >
               {editing ? "Cancel" : "Edit"}
             </Button>
@@ -286,24 +306,7 @@ function ContentItem({
 
       {!editing && (
         <div className="space-y-1 text-sm">
-          {content.type === "TEXT" && (
-            <p className="whitespace-pre-wrap">{content.text}</p>
-          )}
-          {content.type === "LINK" && (
-            <>
-              <a
-                href={content.url ?? "#"}
-                target="_blank"
-                rel="noopener noreferrer"
-                className={`break-all hover:underline ${contentTypeAccent.LINK}`}
-              >
-                {content.url}
-              </a>
-              {content.text && (
-                <p className="text-muted-foreground">{content.text}</p>
-              )}
-            </>
-          )}
+          {content.type === "TEXT" && <RichTextBody text={content.text} />}
           {content.type === "DOCUMENT" && (
             <>
               <a
@@ -320,45 +323,37 @@ function ContentItem({
             </>
           )}
           {content.type === "AI_GENERATED" && (
-            <p className="whitespace-pre-wrap text-muted-foreground">
-              {content.text ?? "(empty)"}
-            </p>
+            <RichTextBody text={content.text} />
           )}
         </div>
       )}
 
       {editing && (
         <div className="space-y-3">
-          {(content.type === "TEXT" ||
-            content.type === "LINK" ||
-            content.type === "DOCUMENT") && (
+          {content.type === "TEXT" && (
+            <RichTextEditor
+              key={content.id}
+              value={content.text}
+              onChange={setText}
+            />
+          )}
+          {content.type === "DOCUMENT" && (
             <div>
-              <Label htmlFor={`edit-text-${content.id}`}>
-                {content.type === "TEXT" ? "Text" : "Caption (optional)"}
-              </Label>
+              <Label htmlFor={`edit-text-${content.id}`}>Caption (optional)</Label>
               <Textarea
                 id={`edit-text-${content.id}`}
                 rows={4}
                 value={text}
                 onChange={(e) => setText(e.target.value)}
-                required={content.type === "TEXT"}
-              />
-            </div>
-          )}
-          {content.type === "LINK" && (
-            <div>
-              <Label htmlFor={`edit-url-${content.id}`}>URL</Label>
-              <Input
-                id={`edit-url-${content.id}`}
-                type="url"
-                value={url}
-                onChange={(e) => setUrl(e.target.value)}
-                required
               />
             </div>
           )}
           {error && <p className="text-sm text-destructive">{error}</p>}
-          <Button type="button" disabled={pending} onClick={() => void save()}>
+          <Button
+            type="button"
+            disabled={pending || textEmpty}
+            onClick={() => void save()}
+          >
             {pending ? "Saving…" : "Save changes"}
           </Button>
         </div>
@@ -383,7 +378,6 @@ function AddContentForms({
       <h2 className="text-base font-semibold">Add content</h2>
       <div className="grid gap-4 md:grid-cols-1">
         <AddTextForm nodeId={nodeId} onCreated={onCreated} />
-        <AddLinkForm nodeId={nodeId} onCreated={onCreated} />
         <AddDocumentForm nodeId={nodeId} onCreated={onCreated} />
       </div>
     </section>
@@ -397,9 +391,11 @@ function AddTextForm({
   nodeId: string;
   onCreated: () => void;
 }) {
-  const [text, setText] = useState("");
+  const [text, setText] = useState(() => stringifyDoc(EMPTY_DOC));
+  const [editorKey, setEditorKey] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+  const empty = isEmptyDoc(coerceDoc(text));
 
   async function submit(event: FormEvent) {
     event.preventDefault();
@@ -416,7 +412,8 @@ function AddTextForm({
         setError(body.error ?? "Failed to add text");
         return;
       }
-      setText("");
+      setText(stringifyDoc(EMPTY_DOC));
+      setEditorKey((key) => key + 1);
       onCreated();
     } catch {
       setError("Network error");
@@ -427,97 +424,11 @@ function AddTextForm({
 
   return (
     <Card>
-      <h3 className="mb-3 inline-flex items-center gap-2 text-sm font-medium">
-        <FontAwesomeIcon icon={faAlignLeft} className="text-muted-foreground" />
-        Text
-      </h3>
       <form onSubmit={submit} className="space-y-3">
-        <Textarea
-          rows={4}
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          placeholder="Notes, explanations, quotes…"
-          required
-        />
+        <RichTextEditor key={editorKey} value={text} onChange={setText} />
         {error && <p className="text-sm text-destructive">{error}</p>}
-        <Button type="submit" disabled={pending || !text.trim()}>
-          {pending ? "Adding…" : "Add text"}
-        </Button>
-      </form>
-    </Card>
-  );
-}
-
-function AddLinkForm({
-  nodeId,
-  onCreated,
-}: {
-  nodeId: string;
-  onCreated: () => void;
-}) {
-  const [url, setUrl] = useState("");
-  const [caption, setCaption] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [pending, setPending] = useState(false);
-
-  async function submit(event: FormEvent) {
-    event.preventDefault();
-    setPending(true);
-    setError(null);
-    try {
-      const res = await fetch(`/api/nodes/${nodeId}/contents`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          type: "LINK",
-          url,
-          text: caption.trim() ? caption.trim() : null,
-        }),
-      });
-      const body = await res.json();
-      if (!res.ok) {
-        setError(body.error ?? "Failed to add link");
-        return;
-      }
-      setUrl("");
-      setCaption("");
-      onCreated();
-    } catch {
-      setError("Network error");
-    } finally {
-      setPending(false);
-    }
-  }
-
-  return (
-    <Card className="surface-link">
-      <h3 className="mb-3 inline-flex items-center gap-2 text-sm font-medium text-link-foreground">
-        <FontAwesomeIcon icon={faLink} />
-        Link
-      </h3>
-      <form onSubmit={submit} className="space-y-3">
-        <div>
-          <Label htmlFor="add-link-url">URL</Label>
-          <Input
-            id="add-link-url"
-            type="url"
-            value={url}
-            onChange={(e) => setUrl(e.target.value)}
-            placeholder="https://…"
-            required
-          />
-        </div>
-        <div>
-          <Label htmlFor="add-link-caption">Caption (optional)</Label>
-          <Input
-            id="add-link-caption"
-            value={caption}
-            onChange={(e) => setCaption(e.target.value)}
-          />
-        </div>
-        {error && <p className="text-sm text-destructive">{error}</p>}
-        <Button type="submit" disabled={pending || !url.trim()}>
-          {pending ? "Adding…" : "Add link"}
+        <Button type="submit" disabled={pending || empty}>
+          {pending ? "Adding…" : "Add"}
         </Button>
       </form>
     </Card>

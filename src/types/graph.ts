@@ -21,9 +21,8 @@ export type GraphPayload = {
 export type ContentDto = {
   id: string;
   nodeId: string;
-  type: "TEXT" | "LINK" | "DOCUMENT" | "AI_GENERATED";
+  type: "TEXT" | "DOCUMENT" | "AI_GENERATED";
   text: string | null;
-  url: string | null;
   fileUrl: string | null;
   createdAt: string;
 };

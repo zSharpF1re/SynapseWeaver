@@ -1,23 +1,20 @@
-import { randomUUID } from "crypto";
-import { mkdir, writeFile } from "fs/promises";
 import path from "path";
 import { jsonError, jsonOk } from "@/lib/api";
-
-const MAX_BYTES = 10 * 1024 * 1024; // 10 MB
-const ALLOWED_EXTENSIONS = new Set([
-  ".pdf",
-  ".txt",
-  ".md",
-  ".png",
-  ".jpg",
-  ".jpeg",
-  ".webp",
-  ".gif",
-  ".doc",
-  ".docx",
-]);
+import {
+  ALLOWED_EXTENSIONS,
+  MAX_BYTES,
+  blobTokenConfigured,
+  putPublicBlob,
+} from "@/lib/blob";
 
 export async function POST(request: Request) {
+  if (!blobTokenConfigured()) {
+    return jsonError(
+      "File storage is not configured (missing BLOB_READ_WRITE_TOKEN)",
+      503,
+    );
+  }
+
   try {
     const formData = await request.formData();
     const file = formData.get("file");
@@ -47,14 +44,14 @@ export async function POST(request: Request) {
       .replace(ext, "")
       .replace(/[^a-zA-Z0-9-_]/g, "_")
       .slice(0, 60);
-    const filename = `${safeBase || "file"}-${randomUUID()}${ext}`;
-    const uploadsDir = path.join(process.cwd(), "public", "uploads");
-    await mkdir(uploadsDir, { recursive: true });
+    const pathname = `uploads/${safeBase || "file"}${ext}`;
+    const fileUrl = await putPublicBlob(
+      pathname,
+      file,
+      file.type || "application/octet-stream",
+    );
 
-    const buffer = Buffer.from(await file.arrayBuffer());
-    await writeFile(path.join(uploadsDir, filename), buffer);
-
-    return jsonOk({ fileUrl: `/uploads/${filename}` }, 201);
+    return jsonOk({ fileUrl }, 201);
   } catch (error) {
     console.error("POST /api/upload", error);
     return jsonError("Failed to upload file", 500);

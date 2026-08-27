@@ -37,32 +37,6 @@ export function isGeminiQuotaError(error: unknown): boolean {
 }
 
 export function mapGeminiError(error: unknown): never {
-  // #region agent log
-  fetch("http://127.0.0.1:7745/ingest/3f3d3851-0a60-4620-83b3-f0609a6077a9", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "X-Debug-Session-Id": "874966",
-    },
-    body: JSON.stringify({
-      sessionId: "874966",
-      runId: "post-fix",
-      hypothesisId: "D",
-      location: "src/lib/ai/gemini.ts:mapGeminiError",
-      message: "mapping Gemini error",
-      data: {
-        extractedStatus: getErrorStatus(error),
-        mappedAs:
-          isGeminiQuotaError(error)
-            ? "quota"
-            : getErrorStatus(error) === 401 || getErrorStatus(error) === 403
-              ? "config"
-              : "unavailable",
-      },
-      timestamp: Date.now(),
-    }),
-  }).catch(() => {});
-  // #endregion
   if (
     error instanceof GeminiConfigError ||
     error instanceof GeminiQuotaError ||
@@ -96,33 +70,6 @@ function getErrorStatus(error: unknown): number | undefined {
   return undefined;
 }
 
-// #region agent log
-function debugGeminiErrorShape(error: unknown) {
-  if (typeof error !== "object" || error === null) {
-    return { type: typeof error, message: String(error) };
-  }
-  const err = error as Record<string, unknown>;
-  const nested =
-    typeof err.error === "object" && err.error !== null
-      ? (err.error as Record<string, unknown>)
-      : undefined;
-  return {
-    name: err.name,
-    status: err.status,
-    statusCode: err.statusCode,
-    code: err.code,
-    keys: Object.keys(err).slice(0, 20),
-    message: error instanceof Error ? error.message.slice(0, 400) : undefined,
-    nestedStatus: nested?.status,
-    nestedCode: nested?.code,
-    nestedMessage:
-      typeof nested?.message === "string"
-        ? nested.message.slice(0, 400)
-        : undefined,
-  };
-}
-// #endregion
-
 export async function generateJson(prompt: {
   system: string;
   user: string;
@@ -130,28 +77,6 @@ export async function generateJson(prompt: {
 }): Promise<unknown> {
   const ai = getGeminiClient();
   try {
-    // #region agent log
-    fetch("http://127.0.0.1:7745/ingest/3f3d3851-0a60-4620-83b3-f0609a6077a9", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Debug-Session-Id": "874966",
-      },
-      body: JSON.stringify({
-        sessionId: "874966",
-        runId: "post-fix",
-        hypothesisId: "A",
-        location: "src/lib/ai/gemini.ts:generateJson",
-        message: "generateContent start",
-        data: {
-          model: GENERATE_MODEL,
-          thinkingLevel: "MINIMAL",
-          hasThinkingBudget: false,
-        },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {});
-    // #endregion
     const response = await ai.models.generateContent({
       model: GENERATE_MODEL,
       contents: prompt.user,
@@ -175,28 +100,6 @@ export async function generateJson(prompt: {
       throw new GeminiOutputError();
     }
   } catch (error) {
-    // #region agent log
-    fetch("http://127.0.0.1:7745/ingest/3f3d3851-0a60-4620-83b3-f0609a6077a9", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Debug-Session-Id": "874966",
-      },
-      body: JSON.stringify({
-        sessionId: "874966",
-        runId: "post-fix",
-        hypothesisId: "A",
-        location: "src/lib/ai/gemini.ts:generateJson:catch",
-        message: "generateContent failed",
-        data: {
-          model: GENERATE_MODEL,
-          extractedStatus: getErrorStatus(error),
-          shape: debugGeminiErrorShape(error),
-        },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {});
-    // #endregion
     mapGeminiError(error);
   }
 }
@@ -205,24 +108,6 @@ export async function embedTexts(texts: string[]): Promise<number[][]> {
   if (texts.length === 0) return [];
   const ai = getGeminiClient();
   try {
-    // #region agent log
-    fetch("http://127.0.0.1:7745/ingest/3f3d3851-0a60-4620-83b3-f0609a6077a9", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Debug-Session-Id": "874966",
-      },
-      body: JSON.stringify({
-        sessionId: "874966",
-        runId: "post-fix",
-        hypothesisId: "B",
-        location: "src/lib/ai/gemini.ts:embedTexts",
-        message: "embedContent start",
-        data: { model: EMBED_MODEL, textCount: texts.length },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {});
-    // #endregion
     const response = await ai.models.embedContent({
       model: EMBED_MODEL,
       contents: texts,
@@ -245,28 +130,6 @@ export async function embedTexts(texts: string[]): Promise<number[][]> {
       return values;
     });
   } catch (error) {
-    // #region agent log
-    fetch("http://127.0.0.1:7745/ingest/3f3d3851-0a60-4620-83b3-f0609a6077a9", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Debug-Session-Id": "874966",
-      },
-      body: JSON.stringify({
-        sessionId: "874966",
-        runId: "post-fix",
-        hypothesisId: "B",
-        location: "src/lib/ai/gemini.ts:embedTexts:catch",
-        message: "embedContent failed",
-        data: {
-          model: EMBED_MODEL,
-          extractedStatus: getErrorStatus(error),
-          shape: debugGeminiErrorShape(error),
-        },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {});
-    // #endregion
     mapGeminiError(error);
   }
 }

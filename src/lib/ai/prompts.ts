@@ -1,3 +1,5 @@
+import { collectLinks, contentPlainText, parseDoc } from "@/lib/rich-text";
+
 const MAX_CONTENT_CHARS = 3_000;
 const MAX_NEIGHBORS = 15;
 
@@ -11,7 +13,11 @@ Keep titles short and concrete. Summaries are one sentence. Relation is a short 
 export type ExpandPromptContext = {
   title: string;
   summary: string | null;
-  contents: Array<{ type: string; text: string | null; url: string | null }>;
+  contents: Array<{
+    type: string;
+    text: string | null;
+    fileUrl: string | null;
+  }>;
   neighborTitles: string[];
 };
 
@@ -59,7 +65,13 @@ function truncateContents(
 }
 
 function formatContent(content: ExpandPromptContext["contents"][number]): string {
-  const parts = [content.text, content.url].filter(Boolean).join(" — ");
-  if (!parts) return "";
-  return `- [${content.type}] ${parts}`;
+  const plain = contentPlainText(content.text);
+  const links = collectLinks(parseDoc(content.text));
+  const linkSuffix =
+    links.length > 0
+      ? ` Links: ${links.map((link) => link.href).join(", ")}`
+      : "";
+  const parts = [plain, content.fileUrl].filter(Boolean).join(" — ");
+  if (!parts && !linkSuffix) return "";
+  return `- [${content.type}] ${parts}${linkSuffix}`.trim();
 }

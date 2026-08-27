@@ -21,7 +21,6 @@ model Content {
   node          Node        @relation(fields: [nodeId], references: [id])
   type          ContentType
   text          String?
-  url           String?
   fileUrl       String?
   createdAt     DateTime    @default(now())
 
@@ -30,7 +29,6 @@ model Content {
 
 enum ContentType {
   TEXT
-  LINK
   DOCUMENT
   AI_GENERATED
 }

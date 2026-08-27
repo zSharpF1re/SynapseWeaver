@@ -8,7 +8,7 @@ Milestone 1 delivers:
 
 - A seeded default graph (study topic: machine learning)
 - Interactive graph view (zoom, pan, drag, click-to-open)
-- Node editing: title/summary plus TEXT, LINK, and DOCUMENT contents
+- Node editing: title/summary plus rich TEXT (TipTap) and DOCUMENT contents
 - Light / dark / system theme via semantic Tailwind tokens
 
 AI generation, dedup, and export land in later milestones.
@@ -20,7 +20,7 @@ AI generation, dedup, and export land in later milestones.
 | App | Next.js App Router (UI + API in one project) |
 | UI | React, Tailwind CSS 4, `next-themes`, `react-force-graph-2d` |
 | Data | PostgreSQL + pgvector, Prisma |
-| Files | Stored under `public/uploads/`; DB keeps only `fileUrl` |
+| Files | Vercel Blob; DB keeps only `fileUrl` |
 
 Key paths:
 
@@ -48,7 +48,7 @@ npm install
 cp .env.example .env.local
 ```
 
-`DATABASE_URL` defaults to the Docker Compose database. `GEMINI_API_KEY` is unused in M1.
+`DATABASE_URL` defaults to the Docker Compose database. `GEMINI_API_KEY` is unused in M1. Create a [Blob store](https://vercel.com/docs/vercel-blob) and copy `BLOB_READ_WRITE_TOKEN` into `.env.local` for uploads and inline images.
 
 ### 3. Database
 
@@ -69,6 +69,6 @@ Open [http://localhost:3000](http://localhost:3000) (redirects to `/graph`).
 ## Design notes
 
 - **Single implicit graph** — no multi-graph or auth in M1.
-- **Content types** — TEXT / LINK / DOCUMENT are editable; `AI_GENERATED` is reserved for M2+.
+- **Content types** — TEXT (rich TipTap JSON) and DOCUMENT are editable; `AI_GENERATED` is reserved for M2+.
 - **Theme** — colors live as CSS variables (`--accent` teal, slate neutrals) so branding can change in one place.
-- **Files** — never stored as blobs in Postgres; only URLs.
+- **Files** — never stored as blobs in Postgres; only Vercel Blob URLs in `fileUrl`.

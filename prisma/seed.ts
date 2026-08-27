@@ -4,6 +4,7 @@ config({ path: ".env.local" });
 import { PrismaClient } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { Pool } from "pg";
+import { docFromPlain, stringifyDoc } from "../src/lib/rich-text";
 
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 const prisma = new PrismaClient({ adapter: new PrismaPg(pool) });
@@ -25,12 +26,17 @@ async function main() {
         create: [
           {
             type: "TEXT",
-            text: "Machine learning is a subset of AI focused on models that improve from experience without being explicitly programmed for every case.",
-          },
-          {
-            type: "LINK",
-            url: "https://en.wikipedia.org/wiki/Machine_learning",
-            text: "Wikipedia overview",
+            text: stringifyDoc(
+              docFromPlain(
+                "Machine learning is a subset of AI focused on models that improve from experience without being explicitly programmed for every case.",
+                [
+                  {
+                    href: "https://en.wikipedia.org/wiki/Machine_learning",
+                    label: "Wikipedia overview",
+                  },
+                ],
+              ),
+            ),
           },
         ],
       },
@@ -44,7 +50,11 @@ async function main() {
       contents: {
         create: {
           type: "TEXT",
-          text: "In supervised learning, each training example has an input and a known target label. Common tasks: classification and regression.",
+          text: stringifyDoc(
+            docFromPlain(
+              "In supervised learning, each training example has an input and a known target label. Common tasks: classification and regression.",
+            ),
+          ),
         },
       },
     },
@@ -57,7 +67,11 @@ async function main() {
       contents: {
         create: {
           type: "TEXT",
-          text: "Unsupervised methods discover clusters, density, or latent factors when labels are unavailable.",
+          text: stringifyDoc(
+            docFromPlain(
+              "Unsupervised methods discover clusters, density, or latent factors when labels are unavailable.",
+            ),
+          ),
         },
       },
     },
@@ -71,12 +85,17 @@ async function main() {
         create: [
           {
             type: "TEXT",
-            text: "Neural nets compose linear transforms and nonlinear activations. Depth and width control expressive power.",
-          },
-          {
-            type: "LINK",
-            url: "https://www.deeplearningbook.org/",
-            text: "Deep Learning book",
+            text: stringifyDoc(
+              docFromPlain(
+                "Neural nets compose linear transforms and nonlinear activations. Depth and width control expressive power.",
+                [
+                  {
+                    href: "https://www.deeplearningbook.org/",
+                    label: "Deep Learning book",
+                  },
+                ],
+              ),
+            ),
           },
         ],
       },
@@ -90,7 +109,11 @@ async function main() {
       contents: {
         create: {
           type: "TEXT",
-          text: "Backprop reverses the forward computation graph to propagate error signals and update weights with gradient descent.",
+          text: stringifyDoc(
+            docFromPlain(
+              "Backprop reverses the forward computation graph to propagate error signals and update weights with gradient descent.",
+            ),
+          ),
         },
       },
     },
@@ -103,7 +126,11 @@ async function main() {
       contents: {
         create: {
           type: "TEXT",
-          text: "Good features encode domain knowledge: scaling, encoding categoricals, time windows, embeddings, and derived ratios.",
+          text: stringifyDoc(
+            docFromPlain(
+              "Good features encode domain knowledge: scaling, encoding categoricals, time windows, embeddings, and derived ratios.",
+            ),
+          ),
         },
       },
     },
@@ -116,7 +143,11 @@ async function main() {
       contents: {
         create: {
           type: "TEXT",
-          text: "Hold-out sets, cross-validation, and metrics (accuracy, F1, RMSE, calibration) help detect overfitting and choose models.",
+          text: stringifyDoc(
+            docFromPlain(
+              "Hold-out sets, cross-validation, and metrics (accuracy, F1, RMSE, calibration) help detect overfitting and choose models.",
+            ),
+          ),
         },
       },
     },
@@ -129,7 +160,11 @@ async function main() {
       contents: {
         create: {
           type: "TEXT",
-          text: "Regularization, more data, simpler models, and early stopping are common remedies when train error is low but test error is high.",
+          text: stringifyDoc(
+            docFromPlain(
+              "Regularization, more data, simpler models, and early stopping are common remedies when train error is low but test error is high.",
+            ),
+          ),
         },
       },
     },

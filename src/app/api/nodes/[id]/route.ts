@@ -1,5 +1,7 @@
 import { prisma } from "@/lib/db/prisma";
 import { jsonError, jsonOk, parseJsonBody } from "@/lib/api";
+import { deleteBlobIfPresent } from "@/lib/blob";
+import { contentSelect, toContentDto } from "@/lib/content-dto";
 import { updateNodeSchema } from "@/lib/validation/nodes";
 
 type Params = { params: Promise<{ id: string }> };
@@ -13,6 +15,7 @@ export async function GET(_request: Request, { params }: Params) {
       include: {
         contents: {
           orderBy: { createdAt: "asc" },
+          select: contentSelect,
         },
       },
     });
@@ -26,15 +29,7 @@ export async function GET(_request: Request, { params }: Params) {
       title: node.title,
       summary: node.summary,
       createdAt: node.createdAt.toISOString(),
-      contents: node.contents.map((content) => ({
-        id: content.id,
-        nodeId: content.nodeId,
-        type: content.type,
-        text: content.text,
-        url: content.url,
-        fileUrl: content.fileUrl,
-        createdAt: content.createdAt.toISOString(),
-      })),
+      contents: node.contents.map(toContentDto),
     });
   } catch (error) {
     console.error("GET /api/nodes/[id]", error);
@@ -85,10 +80,17 @@ export async function DELETE(_request: Request, { params }: Params) {
   const { id } = await params;
 
   try {
-    const existing = await prisma.node.findUnique({ where: { id } });
+    const existing = await prisma.node.findUnique({
+      where: { id },
+      include: { contents: { select: { type: true, fileUrl: true } } },
+    });
     if (!existing) {
       return jsonError("Node not found", 404);
     }
+
+    const documentUrls = existing.contents
+      .filter((content) => content.type === "DOCUMENT")
+      .map((content) => content.fileUrl);
 
     await prisma.$transaction([
       prisma.edge.deleteMany({
@@ -99,6 +101,8 @@ export async function DELETE(_request: Request, { params }: Params) {
       prisma.content.deleteMany({ where: { nodeId: id } }),
       prisma.node.delete({ where: { id } }),
     ]);
+
+    await Promise.all(documentUrls.map((fileUrl) => deleteBlobIfPresent(fileUrl)));
 
     return jsonOk({ ok: true });
   } catch (error) {
