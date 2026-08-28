@@ -32,18 +32,24 @@ export function parseVector(text: string): number[] {
   return parsed;
 }
 
-export async function listNodesMissingEmbeddings(): Promise<
-  Array<{ id: string; title: string; summary: string | null }>
-> {
+export async function listNodesMissingEmbeddings(
+  graphId: string,
+): Promise<Array<{ id: string; title: string; summary: string | null }>> {
   return db().$queryRawUnsafe(
-    `SELECT id, title, summary FROM "Node" WHERE embedding IS NULL`,
+    `SELECT id, title, summary FROM "Node" WHERE embedding IS NULL AND "graphId" = $1`,
+    graphId,
   );
 }
 
-export async function listStoredVectors(): Promise<StoredNodeVector[]> {
+export async function listStoredVectors(
+  graphId: string,
+): Promise<StoredNodeVector[]> {
   const rows = await db().$queryRawUnsafe<
     Array<{ id: string; title: string; embedding: string }>
-  >(`SELECT id, title, embedding::text AS embedding FROM "Node" WHERE embedding IS NOT NULL`);
+  >(
+    `SELECT id, title, embedding::text AS embedding FROM "Node" WHERE embedding IS NOT NULL AND "graphId" = $1`,
+    graphId,
+  );
   return rows.map((row) => ({
     id: row.id,
     title: row.title,

@@ -3,7 +3,7 @@ import { PrismaPg } from "@prisma/adapter-pg";
 import { Pool } from "pg";
 
 /** Bump when the Prisma schema changes so Next.js HMR does not reuse a stale client. */
-const PRISMA_CLIENT_GENERATION = "content-no-url";
+const PRISMA_CLIENT_GENERATION = "graph-model-v2";
 
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;

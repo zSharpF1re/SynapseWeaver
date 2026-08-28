@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db/prisma";
 import { jsonError, jsonOk, parseJsonBody } from "@/lib/api";
 import { contentSelect, toContentDto } from "@/lib/content-dto";
+import { touchGraph } from "@/lib/graphs";
 import { createContentSchema } from "@/lib/validation/contents";
 
 type Params = { params: Promise<{ id: string }> };
@@ -11,7 +12,10 @@ export async function POST(request: Request, { params }: Params) {
   if ("error" in parsed) return parsed.error;
 
   try {
-    const node = await prisma.node.findUnique({ where: { id: nodeId } });
+    const node = await prisma.node.findUnique({
+      where: { id: nodeId },
+      select: { id: true, graphId: true },
+    });
     if (!node) {
       return jsonError("Node not found", 404);
     }
@@ -26,6 +30,7 @@ export async function POST(request: Request, { params }: Params) {
       },
       select: contentSelect,
     });
+    await touchGraph(node.graphId);
 
     return jsonOk(toContentDto(content), 201);
   } catch (error) {

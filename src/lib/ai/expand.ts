@@ -39,6 +39,7 @@ export class ExpandStaleError extends Error {
 
 type NodeWithContents = {
   id: string;
+  graphId: string;
   title: string;
   summary: string | null;
   contents: Array<{
@@ -69,7 +70,11 @@ export function hashExpandContext(node: NodeWithContents): string {
 export async function loadNodeForExpand(nodeId: string) {
   return prisma.node.findUnique({
     where: { id: nodeId },
-    include: {
+    select: {
+      id: true,
+      graphId: true,
+      title: true,
+      summary: true,
       contents: {
         orderBy: { createdAt: "asc" as const },
         select: {
@@ -117,7 +122,7 @@ export async function runExpand(
     neighborTitles,
   });
 
-  const missing = await listNodesMissingEmbeddings();
+  const missing = await listNodesMissingEmbeddings(node.graphId);
   const embedInputs = [
     ...missing.map((item) => nodeEmbedText(item.title, item.summary)),
     ...candidates.map((item) => nodeEmbedText(item.title, item.summary)),
@@ -135,9 +140,9 @@ export async function runExpand(
     );
   }
 
-  const stored = await listStoredVectors();
+  const stored = await listStoredVectors(node.graphId);
   const otherNodes = await prisma.node.findMany({
-    where: { id: { not: nodeId } },
+    where: { id: { not: nodeId }, graphId: node.graphId },
     select: { id: true, title: true },
   });
 

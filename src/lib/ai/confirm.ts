@@ -8,6 +8,7 @@ import {
 } from "@/lib/ai/expand";
 import { prisma } from "@/lib/db/prisma";
 import { setNodeEmbedding } from "@/lib/db/vectors";
+import { touchGraph } from "@/lib/graphs";
 import { fuzzyMatchTitle } from "@/lib/dedup/fuzzy";
 import type { ConfirmAcceptedInput } from "@/lib/validation/ai-proposals";
 import type { ConfirmResponse } from "@/types/graph";
@@ -39,7 +40,7 @@ export async function confirmExpand(
   }
 
   const otherNodes = await prisma.node.findMany({
-    where: { id: { not: nodeId } },
+    where: { id: { not: nodeId }, graphId: node.graphId },
     select: { id: true, title: true },
   });
   const knownIds = new Set(otherNodes.map((item) => item.id));
@@ -93,6 +94,7 @@ export async function confirmExpand(
 
       const createdNode = await tx.node.create({
         data: {
+          graphId: node.graphId,
           title: item.title,
           summary: item.summary?.trim() ? item.summary.trim() : null,
         },
@@ -117,6 +119,7 @@ export async function confirmExpand(
     }
   });
 
+  await touchGraph(node.graphId);
   return { created, linked };
 }
 

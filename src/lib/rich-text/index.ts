@@ -5,8 +5,8 @@ export type {
   TipTapMark,
   TipTapNode,
 } from "./types";
-export { collectLinks, isBlockedHref } from "./links";
-export { hasImage, toPlainText } from "./plain";
+export { collectLinks, isBlockedHref, isHttpUrl } from "./links";
+export { collectImageSrcs, hasImage, toPlainText } from "./plain";
 export {
   EMPTY_DOC,
   MAX_DOC_CHARS,

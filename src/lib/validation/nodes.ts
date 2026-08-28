@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 export const createNodeSchema = z.object({
+  graphId: z.string().uuid("graphId is required"),
   title: z.string().trim().min(1, "Title is required").max(200),
   summary: z.string().trim().max(2000).optional().nullable(),
 });

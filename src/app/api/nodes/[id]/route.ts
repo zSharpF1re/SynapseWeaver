@@ -1,7 +1,11 @@
 import { prisma } from "@/lib/db/prisma";
 import { jsonError, jsonOk, parseJsonBody } from "@/lib/api";
-import { deleteBlobIfPresent } from "@/lib/blob";
+import {
+  collectContentMediaUrls,
+  deleteBlobsIfUnreferenced,
+} from "@/lib/blob-gc";
 import { contentSelect, toContentDto } from "@/lib/content-dto";
+import { touchGraph } from "@/lib/graphs";
 import { updateNodeSchema } from "@/lib/validation/nodes";
 
 type Params = { params: Promise<{ id: string }> };
@@ -26,6 +30,7 @@ export async function GET(_request: Request, { params }: Params) {
 
     return jsonOk({
       id: node.id,
+      graphId: node.graphId,
       title: node.title,
       summary: node.summary,
       createdAt: node.createdAt.toISOString(),
@@ -60,11 +65,13 @@ export async function PATCH(request: Request, { params }: Params) {
       },
       select: {
         id: true,
+        graphId: true,
         title: true,
         summary: true,
         createdAt: true,
       },
     });
+    await touchGraph(existing.graphId);
 
     return jsonOk({
       ...node,
@@ -82,27 +89,17 @@ export async function DELETE(_request: Request, { params }: Params) {
   try {
     const existing = await prisma.node.findUnique({
       where: { id },
-      include: { contents: { select: { type: true, fileUrl: true } } },
+      include: { contents: { select: { type: true, fileUrl: true, text: true } } },
     });
     if (!existing) {
       return jsonError("Node not found", 404);
     }
 
-    const documentUrls = existing.contents
-      .filter((content) => content.type === "DOCUMENT")
-      .map((content) => content.fileUrl);
+    const mediaUrls = collectContentMediaUrls(existing.contents);
 
-    await prisma.$transaction([
-      prisma.edge.deleteMany({
-        where: {
-          OR: [{ sourceNodeId: id }, { targetNodeId: id }],
-        },
-      }),
-      prisma.content.deleteMany({ where: { nodeId: id } }),
-      prisma.node.delete({ where: { id } }),
-    ]);
-
-    await Promise.all(documentUrls.map((fileUrl) => deleteBlobIfPresent(fileUrl)));
+    await prisma.node.delete({ where: { id } });
+    await touchGraph(existing.graphId);
+    await deleteBlobsIfUnreferenced(mediaUrls);
 
     return jsonOk({ ok: true });
   } catch (error) {

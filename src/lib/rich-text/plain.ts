@@ -18,6 +18,21 @@ export function hasImage(node: TipTapNode): boolean {
   return (node.content ?? []).some(hasImage);
 }
 
+export function collectImageSrcs(node: TipTapNode | null | undefined): string[] {
+  if (!node) return [];
+  const srcs: string[] = [];
+  walkImages(node, srcs);
+  return srcs;
+}
+
+function walkImages(node: TipTapNode, srcs: string[]) {
+  if (node.type === "image") {
+    const src = node.attrs?.src;
+    if (typeof src === "string" && src.trim()) srcs.push(src.trim());
+  }
+  for (const child of node.content ?? []) walkImages(child, srcs);
+}
+
 function walk(node: TipTapNode): string {
   if (node.type === "text") return node.text ?? "";
   if (node.type === "hardBreak") return "\n";

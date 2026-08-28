@@ -104,7 +104,7 @@ export function NodeEditor({ nodeId }: { nodeId: string }) {
         setError(body.error ?? "Failed to delete");
         return;
       }
-      router.push("/graph");
+      router.push(node ? `/graph/${node.graphId}` : "/graphs");
       router.refresh();
     } catch {
       setError("Network error while deleting");
@@ -123,9 +123,9 @@ export function NodeEditor({ nodeId }: { nodeId: string }) {
     return (
       <div className="mx-auto flex max-w-lg flex-col gap-3 p-8 text-center">
         <p className="text-sm text-destructive">{error ?? "Node not found"}</p>
-        <Link href="/graph" className="inline-flex items-center gap-2 text-sm text-accent hover:underline">
+        <Link href="/graphs" className="inline-flex items-center gap-2 text-sm text-accent hover:underline">
           <FontAwesomeIcon icon={faArrowLeft} />
-          Back to graph
+          Back to graphs
         </Link>
       </div>
     );
@@ -136,7 +136,7 @@ export function NodeEditor({ nodeId }: { nodeId: string }) {
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <Link
-            href="/graph"
+            href={`/graph/${node.graphId}`}
             className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
           >
             <FontAwesomeIcon icon={faArrowLeft} />

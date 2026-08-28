@@ -7,7 +7,13 @@ import { Button } from "@/components/ui/button";
 import { FontAwesomeIcon } from "@/components/ui/icon";
 import { Input, Label } from "@/components/ui/input";
 
-export function CreateNodeForm({ onCreated }: { onCreated?: () => void }) {
+export function CreateNodeForm({
+  graphId,
+  onCreated,
+}: {
+  graphId: string;
+  onCreated?: () => void;
+}) {
   const router = useRouter();
   const [title, setTitle] = useState("");
   const [summary, setSummary] = useState("");
@@ -23,6 +29,7 @@ export function CreateNodeForm({ onCreated }: { onCreated?: () => void }) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          graphId,
           title,
           summary: summary.trim() ? summary.trim() : null,
         }),

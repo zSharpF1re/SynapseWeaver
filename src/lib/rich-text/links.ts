@@ -5,6 +5,15 @@ export function isBlockedHref(href: string): boolean {
   return lower.startsWith("javascript:") || lower.startsWith("data:text/html");
 }
 
+export function isHttpUrl(value: string): boolean {
+  try {
+    const url = new URL(value.trim());
+    return url.protocol === "http:" || url.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
 export function collectLinks(doc: TipTapNode | null | undefined): CollectedLink[] {
   if (!doc) return [];
 

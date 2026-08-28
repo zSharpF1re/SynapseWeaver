@@ -218,10 +218,24 @@ async function main() {
     return;
   }
 
+  let graph = await prisma.graph.findFirst({
+    orderBy: { createdAt: "asc" },
+  });
+  if (!graph) {
+    graph = await prisma.graph.create({
+      data: {
+        name: "Machine learning foundations",
+        notes:
+          "Starter graph for exploring AI and machine learning fundamentals.",
+      },
+    });
+  }
+
   const ids = new Map<string, string>();
   for (const spec of starterNodes) {
     const node = await prisma.node.create({
       data: {
+        graphId: graph.id,
         title: spec.title,
         summary: spec.summary,
         contents: {
@@ -243,8 +257,13 @@ async function main() {
     }),
   });
 
+  await prisma.graph.update({
+    where: { id: graph.id },
+    data: { updatedAt: new Date() },
+  });
+
   console.log(
-    `Seeded starter graph: ${starterNodes.length} nodes, ${starterEdges.length} edges.`,
+    `Seeded starter graph "${graph.name}": ${starterNodes.length} nodes, ${starterEdges.length} edges.`,
   );
 }
 

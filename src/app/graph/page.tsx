@@ -1,5 +1,5 @@
-import { GraphPageClient } from "@/components/graph/graph-page-client";
+import { redirect } from "next/navigation";
 
-export default function GraphPage() {
-  return <GraphPageClient />;
+export default function GraphIndexPage() {
+  redirect("/graphs");
 }

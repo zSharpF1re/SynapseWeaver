@@ -1,3 +1,15 @@
+export type GraphMeta = {
+  id: string;
+  name: string;
+  notes: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type GraphListItem = GraphMeta & {
+  nodeCount: number;
+};
+
 export type GraphNode = {
   id: string;
   title: string;
@@ -14,6 +26,7 @@ export type GraphEdge = {
 };
 
 export type GraphPayload = {
+  graph: GraphMeta;
   nodes: GraphNode[];
   edges: GraphEdge[];
 };
@@ -28,6 +41,7 @@ export type ContentDto = {
 };
 
 export type NodeDetail = GraphNode & {
+  graphId: string;
   contents: ContentDto[];
 };
 

@@ -3,8 +3,19 @@
 
 // Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
 // Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+model Graph {
+  id        String   @id @default(uuid())
+  name      String
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  nodes     Node[]
+}
+
 model Node {
   id          String    @id @default(uuid())
+  graphId     String
+  graph       Graph     @relation(fields: [graphId], references: [id], onDelete: Cascade)
   title       String
   summary     String?
   createdAt   DateTime  @default(now())
@@ -13,12 +24,14 @@ model Node {
   contents    Content[]
   edgesFrom   Edge[]    @relation("source")
   edgesTo     Edge[]    @relation("target")
+
+  @@index([graphId])
 }
 
 model Content {
   id            String      @id @default(uuid())
   nodeId        String
-  node          Node        @relation(fields: [nodeId], references: [id])
+  node          Node        @relation(fields: [nodeId], references: [id], onDelete: Cascade)
   type          ContentType
   text          String?
   fileUrl       String?
@@ -37,10 +50,10 @@ model Edge {
   id                      String    @id @default(uuid())
   sourceNodeId            String
   targetNodeId            String
-  source                  Node      @relation("source", fields: [sourceNodeId], references: [id])
-  target                  Node      @relation("target", fields: [targetNodeId], references: [id])
+  source                  Node      @relation("source", fields: [sourceNodeId], references: [id], onDelete: Cascade)
+  target                  Node      @relation("target", fields: [targetNodeId], references: [id], onDelete: Cascade)
   generatedFromContentId  String?
-  generatedFromContent    Content?  @relation("generatedFrom", fields: [generatedFromContentId], references: [id])
+  generatedFromContent    Content?  @relation("generatedFrom", fields: [generatedFromContentId], references: [id], onDelete: SetNull)
   createdAt               DateTime  @default(now())
   weight                  Float
 }
