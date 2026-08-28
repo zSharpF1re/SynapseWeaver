@@ -10,6 +10,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { RichTextBody } from "@/components/editor/rich-text-viewer";
 import { RichTextEditor } from "@/components/editor/rich-text-editor";
+import { ExportNodeButton } from "@/components/graph/export-node-button";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import {
@@ -133,13 +134,16 @@ export function NodeEditor({ nodeId }: { nodeId: string }) {
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-6 p-4 sm:p-8">
       <div className="flex items-center justify-between gap-3">
-        <Link
-          href="/graph"
-          className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
-        >
-          <FontAwesomeIcon icon={faArrowLeft} />
-          Graph
-        </Link>
+        <div className="flex items-center gap-3">
+          <Link
+            href="/graph"
+            className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
+          >
+            <FontAwesomeIcon icon={faArrowLeft} />
+            Graph
+          </Link>
+          <ExportNodeButton nodeId={node.id} />
+        </div>
         <Button variant="danger" type="button" onClick={() => void deleteNode()}>
           <FontAwesomeIcon icon={faTrash} />
           Delete node

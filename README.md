@@ -6,7 +6,7 @@ Guided learning through a knowledge graph: start from a few nodes, add content, 
 
 Milestone 1 delivers:
 
-- A seeded default graph (study topic: machine learning)
+- A seeded starter graph (five AI/ML foundation nodes to expand from)
 - Interactive graph view (zoom, pan, drag, click-to-open)
 - Node editing: title/summary plus rich TEXT (TipTap) and DOCUMENT contents
 - Light / dark / system theme via semantic Tailwind tokens

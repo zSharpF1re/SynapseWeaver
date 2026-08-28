@@ -74,7 +74,7 @@ export function GraphForceSettingsPanel({
 
           <div className="space-y-4">
             <SliderField
-              label="Repulsione"
+              label="Repulsion"
               min={30}
               max={800}
               step={10}
@@ -82,7 +82,7 @@ export function GraphForceSettingsPanel({
               onChange={(v) => update("repulsion", v)}
             />
             <SliderField
-              label="Distanza minima"
+              label="Min distance"
               min={4}
               max={80}
               step={1}
@@ -90,7 +90,7 @@ export function GraphForceSettingsPanel({
               onChange={(v) => update("minDistance", v)}
             />
             <SliderField
-              label="Distanza link"
+              label="Link distance"
               min={20}
               max={300}
               step={5}
@@ -98,7 +98,7 @@ export function GraphForceSettingsPanel({
               onChange={(v) => update("linkDistance", v)}
             />
             <SliderField
-              label="Attrazione"
+              label="Attraction"
               min={0.05}
               max={1}
               step={0.05}
