@@ -14,6 +14,7 @@ import { Card } from "@/components/ui/card";
 import { FontAwesomeIcon } from "@/components/ui/icon";
 import { Input, Label, Textarea } from "@/components/ui/input";
 import type { GraphListItem } from "@/types/graph";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
 
 const IMPORT_DISCLAIMER =
   "Import graphs only and only from trusted sources. No responsibility is taken for imported data or any harm that follows.";
@@ -28,6 +29,7 @@ export function GraphsPageClient() {
   const [creating, setCreating] = useState(false);
   const [importing, setImporting] = useState(false);
   const [importError, setImportError] = useState<string | null>(null);
+  const [showMenu, setShowMenu] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -133,7 +135,7 @@ export function GraphsPageClient() {
           import a JSON export.
         </p>
       </div>
-
+      {showMenu &&
       <div className="grid gap-4 sm:grid-cols-2">
         <Card>
           <h2 className="mb-3 text-sm font-semibold">Create graph</h2>
@@ -193,6 +195,16 @@ export function GraphsPageClient() {
           </p>
         </Card>
       </div>
+} { !showMenu && 
+  <div className="flex justify-end gap-2">
+        <ThemeToggle />
+  
+    <Button type="button" onClick={() => setShowMenu(true)}>
+      <FontAwesomeIcon icon={faPlus} />
+      Create graph
+    </Button>
+  </div>
+}
 
       {error && <p className="text-sm text-destructive">{error}</p>}
 
@@ -253,6 +265,8 @@ export function GraphsPageClient() {
           ))}
         </ul>
       )}
+
+      
     </div>
   );
 }

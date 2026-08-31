@@ -19,3 +19,4 @@ export {
 } from "./parse";
 export type { ParseDocResult } from "./parse";
 export { contentPlainText } from "./stored";
+export { docFromMarkdown } from "./from-markdown";

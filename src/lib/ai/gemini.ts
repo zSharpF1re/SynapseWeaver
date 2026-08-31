@@ -1,4 +1,4 @@
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenAI, ThinkingLevel } from "@google/genai";
 import {
   GeminiConfigError,
   GeminiOutputError,
@@ -10,6 +10,7 @@ export const GENERATE_MODEL = "gemini-3.6-flash";
 export const EMBED_MODEL = "gemini-embedding-001";
 export const EMBED_DIMENSIONS = 768;
 export const GEMINI_TIMEOUT_MS = 20_000;
+export const EXPLAIN_TIMEOUT_MS = 40_000;
 
 let client: GoogleGenAI | null = null;
 
@@ -21,7 +22,7 @@ export function getGeminiClient(): GoogleGenAI {
   if (!client) {
     client = new GoogleGenAI({
       apiKey,
-      httpOptions: { timeout: GEMINI_TIMEOUT_MS },
+      httpOptions: { timeout: EXPLAIN_TIMEOUT_MS },
     });
   }
   return client;
@@ -70,6 +71,42 @@ function getErrorStatus(error: unknown): number | undefined {
   return undefined;
 }
 
+export async function generateMarkdown(prompt: {
+  system: string;
+  user: string;
+}): Promise<string> {
+  const ai = getGeminiClient();
+  try {
+    const response = await ai.models.generateContent({
+      model: GENERATE_MODEL,
+      contents: prompt.user,
+      config: {
+        systemInstruction: prompt.system,
+        temperature: 0.7,
+        maxOutputTokens: 2048,
+        abortSignal: AbortSignal.timeout(EXPLAIN_TIMEOUT_MS),
+        httpOptions: { timeout: EXPLAIN_TIMEOUT_MS },
+        thinkingConfig: { thinkingLevel: ThinkingLevel.MINIMAL },
+      },
+    });
+    const text = stripWrappingFence(response.text ?? "");
+    if (!text) {
+      throw new GeminiOutputError();
+    }
+    return text;
+  } catch (error) {
+    mapGeminiError(error);
+  }
+}
+
+function stripWrappingFence(markdown: string): string {
+  const trimmed = markdown.trim();
+  const match = /^```(?:markdown|md)?\s*\r?\n([\s\S]*?)\r?\n```$/i.exec(
+    trimmed,
+  );
+  return (match?.[1] ?? trimmed).trim();
+}
+
 export async function generateJson(prompt: {
   system: string;
   user: string;
@@ -87,7 +124,7 @@ export async function generateJson(prompt: {
         responseMimeType: "application/json",
         responseJsonSchema: prompt.responseJsonSchema,
         abortSignal: AbortSignal.timeout(GEMINI_TIMEOUT_MS),
-        thinkingConfig: { thinkingLevel: "MINIMAL" },
+        thinkingConfig: { thinkingLevel: ThinkingLevel.MINIMAL },
       },
     });
     const text = response.text?.trim();

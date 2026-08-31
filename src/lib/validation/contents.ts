@@ -24,9 +24,16 @@ const documentContentSchema = z.object({
   text: z.string().trim().optional().nullable(),
 });
 
+const aiGeneratedContentSchema = z.object({
+  type: z.literal("AI_GENERATED"),
+  text: tiptapTextSchema,
+  fileUrl: z.null().optional(),
+});
+
 export const createContentSchema = z.discriminatedUnion("type", [
   textContentSchema,
   documentContentSchema,
+  aiGeneratedContentSchema,
 ]);
 
 export const updateContentSchema = z

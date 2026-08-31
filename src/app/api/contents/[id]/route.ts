@@ -30,15 +30,14 @@ export async function PATCH(request: Request, { params }: Params) {
       return jsonError("Content not found", 404);
     }
 
-    if (existing.type === "AI_GENERATED") {
-      return jsonError("AI_GENERATED content cannot be edited in M1", 400);
-    }
-
     if (parsed.data.fileUrl !== undefined && existing.type !== "DOCUMENT") {
       return jsonError("fileUrl can only be updated on DOCUMENT content", 400);
     }
 
-    if (parsed.data.text !== undefined && existing.type === "TEXT") {
+    if (
+      parsed.data.text !== undefined &&
+      (existing.type === "TEXT" || existing.type === "AI_GENERATED")
+    ) {
       if (parsed.data.text == null) {
         return jsonError("Text is required", 400);
       }

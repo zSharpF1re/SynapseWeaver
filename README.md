@@ -69,6 +69,6 @@ Open [http://localhost:3000](http://localhost:3000) (redirects to `/graph`).
 ## Design notes
 
 - **Single implicit graph** — no multi-graph or auth in M1.
-- **Content types** — TEXT (rich TipTap JSON) and DOCUMENT are editable; `AI_GENERATED` is reserved for M2+.
+- **Content types** — TEXT and AI_GENERATED (rich TipTap JSON) and DOCUMENT are editable; sparse nodes can use Write with AI to draft a note, then keep or discard it.
 - **Theme** — colors live as CSS variables (`--accent` teal, slate neutrals) so branding can change in one place.
 - **Files** — never stored as blobs in Postgres; only Vercel Blob URLs in `fileUrl`.

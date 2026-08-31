@@ -63,6 +63,10 @@ export type ExpandResponse = {
   cached: boolean;
 };
 
+export type ExplainResponse = {
+  text: string;
+};
+
 export type ConfirmCreatedNode = {
   id: string;
   title: string;

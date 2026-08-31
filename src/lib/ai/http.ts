@@ -9,14 +9,16 @@ import {
   ExpandContentError,
   ExpandNodeNotFoundError,
 } from "@/lib/ai/expand";
+import {
+  ExplainNodeNotFoundError,
+  ExplainNotSparseError,
+} from "@/lib/ai/explain";
 
-export function mapExpandError(error: unknown, logLabel: string) {
-  if (error instanceof ExpandNodeNotFoundError) {
-    return jsonError(error.message, 404);
-  }
-  if (error instanceof ExpandContentError) {
-    return jsonError(error.message, 400);
-  }
+function mapGeminiHttpError(
+  error: unknown,
+  logLabel: string,
+  fallback: string,
+) {
   if (error instanceof GeminiConfigError) {
     return jsonError(error.message, 503);
   }
@@ -30,5 +32,25 @@ export function mapExpandError(error: unknown, logLabel: string) {
     return jsonError(error.message, 503);
   }
   console.error(logLabel, error);
-  return jsonError("Failed to expand node", 500);
+  return jsonError(fallback, 500);
+}
+
+export function mapExpandError(error: unknown, logLabel: string) {
+  if (error instanceof ExpandNodeNotFoundError) {
+    return jsonError(error.message, 404);
+  }
+  if (error instanceof ExpandContentError) {
+    return jsonError(error.message, 400);
+  }
+  return mapGeminiHttpError(error, logLabel, "Failed to expand node");
+}
+
+export function mapExplainError(error: unknown, logLabel: string) {
+  if (error instanceof ExplainNodeNotFoundError) {
+    return jsonError(error.message, 404);
+  }
+  if (error instanceof ExplainNotSparseError) {
+    return jsonError(error.message, 400);
+  }
+  return mapGeminiHttpError(error, logLabel, "Failed to generate note");
 }

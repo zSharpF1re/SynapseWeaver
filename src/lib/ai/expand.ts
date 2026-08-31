@@ -3,6 +3,7 @@ import { embedTexts } from "@/lib/ai/gemini";
 import { nodeEmbedText } from "@/lib/ai/embeddings";
 import { getExpandCache, setExpandCache } from "@/lib/ai/expand-cache";
 import { generateRelatedNodes } from "@/lib/ai/generate-related";
+import { loadImmediateNeighbors } from "@/lib/ai/neighbors";
 import { prisma } from "@/lib/db/prisma";
 import {
   listNodesMissingEmbeddings,
@@ -114,7 +115,9 @@ export async function runExpand(
     return { proposals: cached, contentHash, cached: true };
   }
 
-  const neighborTitles = await loadNeighborTitles(nodeId);
+  const neighborTitles = (await loadImmediateNeighbors(nodeId)).map(
+    (neighbor) => neighbor.title,
+  );
   const candidates = await generateRelatedNodes({
     title: node.title,
     summary: node.summary,
@@ -158,25 +161,6 @@ export async function runExpand(
 
   setExpandCache(nodeId, contentHash, proposals);
   return { proposals, contentHash, cached: false };
-}
-
-async function loadNeighborTitles(nodeId: string): Promise<string[]> {
-  const edges = await prisma.edge.findMany({
-    where: {
-      OR: [{ sourceNodeId: nodeId }, { targetNodeId: nodeId }],
-    },
-    select: {
-      source: { select: { id: true, title: true } },
-      target: { select: { id: true, title: true } },
-    },
-  });
-
-  const titles = new Map<string, string>();
-  for (const edge of edges) {
-    if (edge.source.id !== nodeId) titles.set(edge.source.id, edge.source.title);
-    if (edge.target.id !== nodeId) titles.set(edge.target.id, edge.target.title);
-  }
-  return [...titles.values()].slice(0, 15);
 }
 
 function classifyProposal(

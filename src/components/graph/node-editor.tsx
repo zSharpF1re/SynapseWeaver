@@ -11,6 +11,7 @@ import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { RichTextBody } from "@/components/editor/rich-text-viewer";
 import { RichTextEditor } from "@/components/editor/rich-text-editor";
 import { ExportNodeButton } from "@/components/graph/export-node-button";
+import { WriteWithAi } from "@/components/graph/write-with-ai";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import {
@@ -185,6 +186,11 @@ export function NodeEditor({ nodeId }: { nodeId: string }) {
 
       <section className="space-y-4">
         <h2 className="text-base font-semibold">Contents</h2>
+        <WriteWithAi
+          nodeId={nodeId}
+          contents={node.contents}
+          onCreated={() => void load()}
+        />
         {node.contents.length === 0 ? (
           <p className="text-sm text-muted-foreground">
             No contents yet. Add text or a document below.
@@ -205,6 +211,10 @@ export function NodeEditor({ nodeId }: { nodeId: string }) {
   );
 }
 
+function isRichText(type: ContentDto["type"]) {
+  return type === "TEXT" || type === "AI_GENERATED";
+}
+
 function ContentItem({
   content,
   onChanged,
@@ -214,7 +224,7 @@ function ContentItem({
 }) {
   const [editing, setEditing] = useState(false);
   const [text, setText] = useState(
-    content.type === "TEXT"
+    isRichText(content.type)
       ? (content.text ?? stringifyDoc(EMPTY_DOC))
       : (content.text ?? ""),
   );
@@ -226,7 +236,7 @@ function ContentItem({
     setError(null);
     try {
       const payload: Record<string, string> = {};
-      if (content.type === "TEXT") payload.text = text;
+      if (isRichText(content.type)) payload.text = text;
       if (content.type === "DOCUMENT") {
         payload.text = text.trim();
       }
@@ -268,9 +278,7 @@ function ContentItem({
     }
   }
 
-  const canEdit = content.type !== "AI_GENERATED";
-  const textEmpty =
-    content.type === "TEXT" && isEmptyDoc(coerceDoc(text));
+  const textEmpty = isRichText(content.type) && isEmptyDoc(coerceDoc(text));
 
   return (
     <Card className={contentTypeSurface[content.type]}>
@@ -286,22 +294,20 @@ function ContentItem({
           </span>
         )}
         <div className="flex gap-1">
-          {canEdit && (
-            <Button
-              type="button"
-              variant="ghost"
-              onClick={() => {
-                setText(
-                  content.type === "TEXT"
-                    ? (content.text ?? stringifyDoc(EMPTY_DOC))
-                    : (content.text ?? ""),
-                );
-                setEditing((v) => !v);
-              }}
-            >
-              {editing ? "Cancel" : "Edit"}
-            </Button>
-          )}
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={() => {
+              setText(
+                isRichText(content.type)
+                  ? (content.text ?? stringifyDoc(EMPTY_DOC))
+                  : (content.text ?? ""),
+              );
+              setEditing((v) => !v);
+            }}
+          >
+            {editing ? "Cancel" : "Edit"}
+          </Button>
           <Button type="button" variant="ghost" onClick={() => void remove()}>
             Delete
           </Button>
@@ -334,7 +340,7 @@ function ContentItem({
 
       {editing && (
         <div className="space-y-3">
-          {content.type === "TEXT" && (
+          {isRichText(content.type) && (
             <RichTextEditor
               key={content.id}
               value={content.text}
