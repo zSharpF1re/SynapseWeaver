@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { faShareNodes } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@/components/ui/icon";
+import Image from "next/image";
 
 export function AppHeader() {
   return (
@@ -10,7 +11,7 @@ export function AppHeader() {
           href="/graphs"
           className="inline-flex items-center gap-2 text-sm font-semibold tracking-tight text-foreground"
         >
-          <FontAwesomeIcon icon={faShareNodes} className="text-accent" />
+          <Image src="/favicon.ico"  className="rounded-sm" alt="SynapseWeaver" width={16} height={16} />
           SynapseWeaver
         </Link>
         <nav className="hidden text-sm text-muted-foreground sm:block">

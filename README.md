@@ -1,3 +1,8 @@
+
+<p align="center">
+<img src='logo.png' alt="logo" width="150px" align="center">
+</p>
+
 # SynapseWeaver
 
 Guided learning through a knowledge graph: start from a few nodes, add content, and (from M2) expand by discovering related topics. The product is **propose → review → confirm** — the user keeps editorial control.
