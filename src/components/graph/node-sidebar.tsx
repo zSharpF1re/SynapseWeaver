@@ -1,6 +1,6 @@
 "use client";
 
-import { faPen, faWandMagicSparkles, faXmark } from "@fortawesome/free-solid-svg-icons";
+import { faPen, faPlus, faWandMagicSparkles, faXmark } from "@fortawesome/free-solid-svg-icons";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { ExpandProposals } from "@/components/graph/expand-proposals";
@@ -141,7 +141,17 @@ export function NodeSidebar({
           </div>
           <div className="flex shrink-0 items-start gap-1">
             {node && !error && (
-              <ExportNodeButton nodeId={node.id} variant="ghost" />
+              <>
+                <Link
+                  href={`/node/new?from=${node.id}&graphId=${node.graphId}`}
+                  className="inline-flex size-8 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground"
+                  aria-label="Add connected node"
+                  title="Add connected node"
+                >
+                  <FontAwesomeIcon icon={faPlus} />
+                </Link>
+                <ExportNodeButton nodeId={node.id} variant="ghost" />
+              </>
             )}
             <button
               type="button"

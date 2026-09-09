@@ -46,6 +46,8 @@ type GraphNodeObj = {
   id: string;
   title: string;
   summary: string | null;
+  x?: number;
+  y?: number;
 };
 
 type GraphLinkObj = {
@@ -58,15 +60,25 @@ type GraphLinkObj = {
 type GraphViewProps = {
   data: GraphPayload;
   selectedNodeId: string | null;
+  connectingFromId?: string | null;
   onNodeSelect: (nodeId: string) => void;
   onBackgroundClick?: () => void;
+  onNodeRightClick?: (nodeId: string, event: MouseEvent) => void;
+  onBackgroundRightClick?: (event: MouseEvent) => void;
+  onConnectTarget?: (nodeId: string) => void;
+  onConnectCancel?: () => void;
 };
 
 export function GraphView({
   data,
   selectedNodeId,
+  connectingFromId = null,
   onNodeSelect,
   onBackgroundClick,
+  onNodeRightClick,
+  onBackgroundRightClick,
+  onConnectTarget,
+  onConnectCancel,
 }: GraphViewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const fgRef = useRef<ForceGraphMethods | undefined>(undefined);
@@ -134,6 +146,63 @@ export function GraphView({
     setGraphReady(Boolean(fg));
   }, []);
 
+  const connectLineRef = useRef<SVGLineElement>(null);
+  const nodePosRef = useRef(new Map<string, { x: number; y: number }>());
+
+  useEffect(() => {
+    if (!connectingFromId) return;
+    const sourceId = connectingFromId;
+
+    const el = containerRef.current;
+    if (!el) return;
+
+    let pointer: { x: number; y: number } | null = null;
+    let raf = 0;
+    let cancelled = false;
+
+    function readPointer(event: PointerEvent) {
+      const rect = el!.getBoundingClientRect();
+      pointer = {
+        x: event.clientX - rect.left,
+        y: event.clientY - rect.top,
+      };
+    }
+
+    function tick() {
+      if (cancelled) return;
+      const fg = fgRef.current;
+      const line = connectLineRef.current;
+      const pos = nodePosRef.current.get(sourceId);
+      if (fg?.graph2ScreenCoords && line && pointer && pos) {
+        const from = fg.graph2ScreenCoords(pos.x, pos.y);
+        line.setAttribute("x1", String(from.x));
+        line.setAttribute("y1", String(from.y));
+        line.setAttribute("x2", String(pointer.x));
+        line.setAttribute("y2", String(pointer.y));
+        line.style.visibility = "visible";
+      }
+      raf = window.requestAnimationFrame(tick);
+    }
+
+    function onKey(event: KeyboardEvent) {
+      if (event.key !== "Escape") return;
+      event.preventDefault();
+      event.stopPropagation();
+      onConnectCancel?.();
+    }
+
+    window.addEventListener("pointermove", readPointer);
+    document.addEventListener("keydown", onKey, true);
+    tick();
+
+    return () => {
+      cancelled = true;
+      window.cancelAnimationFrame(raf);
+      window.removeEventListener("pointermove", readPointer);
+      document.removeEventListener("keydown", onKey, true);
+    };
+  }, [connectingFromId, onConnectCancel]);
+
   const applyForces = useCallback((settings: GraphForceSettings) => {
     const fg = fgRef.current;
     if (!fg) return false;
@@ -191,9 +260,14 @@ export function GraphView({
       _globalScale: number,
     ) => {
       if (!colors || node.x == null || node.y == null) return;
+      if (node.id != null) {
+        nodePosRef.current.set(String(node.id), { x: node.x, y: node.y });
+      }
       const title =
         typeof node.title === "string" ? node.title : String(node.id ?? "");
-      const isSelected = String(node.id) === selectedNodeId;
+      const isSelected =
+        String(node.id) === selectedNodeId ||
+        String(node.id) === connectingFromId;
       const radius = isSelected ? 10 : 8;
 
       ctx.beginPath();
@@ -210,12 +284,16 @@ export function GraphView({
       ctx.fillStyle = colors.foreground;
       ctx.fillText(title, node.x, node.y + radius + 4);
     },
-    [colors, selectedNodeId],
+    [colors, selectedNodeId, connectingFromId],
   );
 
   return (
     <div className="relative h-[95dvh]">
-    <div ref={containerRef} className="h-full w-full bg-background">
+    <div
+      ref={containerRef}
+      className={`h-full w-full bg-background ${connectingFromId ? "cursor-crosshair" : ""}`}
+      onContextMenu={(event) => event.preventDefault()}
+    >
       {colors && (
         <ForceGraph2D
           ref={bindGraphRef}
@@ -236,14 +314,67 @@ export function GraphView({
           linkWidth={(link) => Math.max(1, (link as GraphLinkObj).weight)}
           onNodeClick={(node) => {
             const id = (node as GraphNodeObj).id;
-            if (id) onNodeSelect(id);
+            if (!id) return;
+            if (connectingFromId) {
+              if (id === connectingFromId) {
+                onConnectCancel?.();
+                return;
+              }
+              onConnectTarget?.(id);
+              return;
+            }
+            onNodeSelect(id);
           }}
-          onBackgroundClick={() => onBackgroundClick?.()}
+          onNodeRightClick={(node, event) => {
+            event.preventDefault();
+            const id = (node as GraphNodeObj).id;
+            if (id) onNodeRightClick?.(id, event);
+          }}
+          onBackgroundClick={(event) => {
+            if (typeof event.button === "number" && event.button !== 0) return;
+            if (connectingFromId) {
+              onConnectCancel?.();
+              return;
+            }
+            onBackgroundClick?.();
+          }}
+          onBackgroundRightClick={(event) => {
+            event.preventDefault();
+            if (connectingFromId) {
+              onConnectCancel?.();
+              return;
+            }
+            onBackgroundRightClick?.(event);
+          }}
           cooldownTicks={80}
-          enableNodeDrag
+          enableNodeDrag={!connectingFromId}
           enableZoomInteraction
           enablePanInteraction
         />
+      )}
+      {connectingFromId && colors && (
+        <svg
+          className="pointer-events-none absolute inset-0 z-10 h-full w-full"
+          aria-hidden
+        >
+          <line
+            ref={connectLineRef}
+            x1={0}
+            y1={0}
+            x2={0}
+            y2={0}
+            stroke={colors.accent}
+            strokeWidth={2}
+            strokeDasharray="6 4"
+            strokeLinecap="round"
+            style={{ visibility: "hidden" }}
+          />
+        </svg>
+      )}
+      {connectingFromId && (
+        <p className="pointer-events-none absolute bottom-4 left-1/2 z-20 -translate-x-1/2 rounded-lg border border-border bg-card px-3 py-2 text-sm text-muted-foreground shadow-sm">
+          Click a node to connect · Esc to cancel
+        </p>
       )}
     </div>
       {forcesReady && (

@@ -1,8 +1,10 @@
 "use client";
 
 import {
+  faArrowDown,
   faArrowLeft,
   faFileLines,
+  faLink,
   faTrash,
 } from "@fortawesome/free-solid-svg-icons";
 import Link from "next/link";
@@ -28,10 +30,299 @@ import {
   isEmptyDoc,
   stringifyDoc,
 } from "@/lib/rich-text";
-import type { ContentDto, NodeDetail } from "@/types/graph";
+import type { ContentDto, NodeDetail, NodePlacement } from "@/types/graph";
 
-export function NodeEditor({ nodeId }: { nodeId: string }) {
+type NodeEditorProps = {
+  nodeId?: string;
+  graphId?: string;
+  sourceNodeId?: string;
+  place?: boolean;
+  placement?: NodePlacement | null;
+};
+
+export function NodeEditor({
+  nodeId,
+  graphId,
+  sourceNodeId,
+  place,
+  placement,
+}: NodeEditorProps) {
+  if (!nodeId) {
+    return (
+      <CreateNodeEditor
+        graphId={graphId}
+        sourceNodeId={sourceNodeId}
+        place={Boolean(place) && !sourceNodeId}
+      />
+    );
+  }
+  return <ExistingNodeEditor nodeId={nodeId} placement={placement ?? null} />;
+}
+
+function CreateNodeEditor({
+  graphId: graphIdProp,
+  sourceNodeId,
+  place,
+}: {
+  graphId?: string;
+  sourceNodeId?: string;
+  place: boolean;
+}) {
   const router = useRouter();
+  const [title, setTitle] = useState("");
+  const [summary, setSummary] = useState("");
+  const [graphId, setGraphId] = useState(graphIdProp ?? "");
+  const [parentTitle, setParentTitle] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function init() {
+      setLoading(true);
+      setError(null);
+
+      if (!sourceNodeId && !graphIdProp) {
+        if (!cancelled) {
+          setError("graphId or from is required");
+          setLoading(false);
+        }
+        return;
+      }
+
+      if (!sourceNodeId) {
+        if (!cancelled) {
+          setGraphId(graphIdProp ?? "");
+          setParentTitle(null);
+          setLoading(false);
+        }
+        return;
+      }
+
+      try {
+        const res = await fetch(`/api/nodes/${sourceNodeId}`);
+        const body = await res.json();
+        if (cancelled) return;
+        if (!res.ok) {
+          setError(body.error ?? "Failed to load source node");
+          setLoading(false);
+          return;
+        }
+        const parent = body as NodeDetail;
+        if (graphIdProp && graphIdProp !== parent.graphId) {
+          setGraphId("");
+          setError("Source node does not belong to this graph");
+          setLoading(false);
+          return;
+        }
+        setGraphId(parent.graphId);
+        setParentTitle(parent.title);
+        setLoading(false);
+      } catch {
+        if (!cancelled) {
+          setError("Network error while loading source node");
+          setLoading(false);
+        }
+      }
+    }
+
+    void init();
+    return () => {
+      cancelled = true;
+    };
+  }, [graphIdProp, sourceNodeId]);
+
+  async function createNode(event: FormEvent) {
+    event.preventDefault();
+    if (!graphId) return;
+    setSaving(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/nodes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          graphId,
+          title,
+          summary: summary.trim() ? summary.trim() : null,
+          ...(sourceNodeId ? { sourceNodeId } : {}),
+          ...(place ? { place: true } : {}),
+        }),
+      });
+      const body = await res.json();
+      if (!res.ok) {
+        setError(body.error ?? "Failed to create node");
+        return;
+      }
+      router.replace(
+        nodeEditorHref(
+          body.id as string,
+          body.placement as NodePlacement | undefined,
+        ),
+      );
+      router.refresh();
+    } catch {
+      setError("Network error while creating node");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="flex flex-1 items-center justify-center p-8 text-sm text-muted-foreground">
+        Loading editor…
+      </div>
+    );
+  }
+
+  const backHref = graphId ? `/graph/${graphId}` : "/graphs";
+
+  if (error && !graphId) {
+    return (
+      <div className="mx-auto flex max-w-lg flex-col gap-3 p-8 text-center">
+        <p className="text-sm text-destructive">{error}</p>
+        <Link
+          href="/graphs"
+          className="inline-flex items-center justify-center gap-2 text-sm text-accent hover:underline"
+        >
+          <FontAwesomeIcon icon={faArrowLeft} />
+          Back to graphs
+        </Link>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mx-auto flex w-full max-w-3xl flex-col gap-6 p-4 sm:p-8">
+      <div className="flex items-center gap-3">
+        <Link
+          href={backHref}
+          className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
+        >
+          <FontAwesomeIcon icon={faArrowLeft} />
+          Graph
+        </Link>
+      </div>
+
+      {parentTitle && sourceNodeId && (
+        <p className="rounded-xl border border-border bg-muted/60 px-3 py-2 text-sm text-muted-foreground">
+          <FontAwesomeIcon icon={faLink} className="mr-2" />
+          Will be linked to{" "}
+          <Link
+            href={`/node/${sourceNodeId}`}
+            className="font-medium text-foreground hover:underline"
+          >
+            {parentTitle}
+          </Link>
+        </p>
+      )}
+
+      {place && (
+        <p className="rounded-xl border border-border bg-muted/60 px-3 py-2 text-sm text-muted-foreground">
+          We&apos;ll hook it to the closest topic if there is one.
+        </p>
+      )}
+
+      <Card>
+        <form onSubmit={createNode} className="space-y-4">
+          <div>
+            <Label htmlFor="node-title">Title</Label>
+            <Input
+              id="node-title"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="New topic"
+              required
+            />
+          </div>
+          <div>
+            <Label htmlFor="node-summary">Summary</Label>
+            <Textarea
+              id="node-summary"
+              rows={3}
+              value={summary}
+              onChange={(e) => setSummary(e.target.value)}
+              placeholder="Optional short description"
+            />
+          </div>
+          <div className="flex items-center gap-3">
+            <Button type="submit" disabled={saving || !title.trim() || !graphId}>
+              {place ? (
+                <FontAwesomeIcon icon={faArrowDown} />
+              ) : null}
+              {saving
+                ? place
+                  ? "Dropping in…"
+                  : "Creating…"
+                : place
+                  ? "Drop in"
+                  : "Create node"}
+            </Button>
+            {error && <span className="text-sm text-destructive">{error}</span>}
+          </div>
+        </form>
+      </Card>
+    </div>
+  );
+}
+
+function nodeEditorHref(id: string, placement?: NodePlacement): string {
+  if (!placement) return `/node/${id}`;
+  const params = new URLSearchParams({ placed: placement.status });
+  if (placement.neighborTitle) params.set("neighbor", placement.neighborTitle);
+  if (placement.neighborId) params.set("neighborId", placement.neighborId);
+  return `/node/${id}?${params.toString()}`;
+}
+
+function PlacementBanner({ placement }: { placement: NodePlacement }) {
+  if (placement.status === "linked" && placement.neighborTitle) {
+    return (
+      <p className="rounded-xl border border-border bg-muted/60 px-3 py-2 text-sm text-muted-foreground">
+        <FontAwesomeIcon icon={faLink} className="mr-2" />
+        Linked to{" "}
+        {placement.neighborId ? (
+          <Link
+            href={`/node/${placement.neighborId}`}
+            className="font-medium text-foreground hover:underline"
+          >
+            {placement.neighborTitle}
+          </Link>
+        ) : (
+          <span className="font-medium text-foreground">
+            {placement.neighborTitle}
+          </span>
+        )}
+      </p>
+    );
+  }
+
+  if (placement.status === "skipped") {
+    return (
+      <p className="rounded-xl border border-border bg-muted/60 px-3 py-2 text-sm text-muted-foreground">
+        Couldn&apos;t place it automatically — left unconnected.
+      </p>
+    );
+  }
+
+  return (
+    <p className="rounded-xl border border-border bg-muted/60 px-3 py-2 text-sm text-muted-foreground">
+      No close topic — left unconnected.
+    </p>
+  );
+}
+
+function ExistingNodeEditor({
+  nodeId,
+  placement,
+}: {
+  nodeId: string;
+  placement: NodePlacement | null;
+}) {
+  const router = useRouter();
+  const [hint] = useState(placement);
   const [node, setNode] = useState<NodeDetail | null>(null);
   const [title, setTitle] = useState("");
   const [summary, setSummary] = useState("");
@@ -66,6 +357,11 @@ export function NodeEditor({ nodeId }: { nodeId: string }) {
   useEffect(() => {
     void load();
   }, [load]);
+
+  useEffect(() => {
+    if (!placement) return;
+    router.replace(`/node/${nodeId}`, { scroll: false });
+  }, [nodeId, placement, router]);
 
   async function saveMeta(event: FormEvent) {
     event.preventDefault();
@@ -150,6 +446,8 @@ export function NodeEditor({ nodeId }: { nodeId: string }) {
           Delete node
         </Button>
       </div>
+
+      {hint && <PlacementBanner placement={hint} />}
 
       <Card>
         <form onSubmit={saveMeta} className="space-y-4">

@@ -1,25 +1,42 @@
 "use client";
 
 import {
+  faArrowDown,
   faDownload,
+  faEye,
+  faLink,
+  faPen,
   faPlus,
   faRotate,
-  faXmark,
+  faTrash,
 } from "@fortawesome/free-solid-svg-icons";
-import { useCallback, useEffect, useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { GraphView } from "@/components/graph/graph-view";
-import { CreateNodeForm } from "@/components/graph/create-node-form";
 import { NodeSidebar } from "@/components/graph/node-sidebar";
-import { Card } from "@/components/ui/card";
+import {
+  ContextMenu,
+  type ContextMenuItem,
+} from "@/components/ui/context-menu";
 import { FontAwesomeIcon } from "@/components/ui/icon";
 import type { GraphPayload } from "@/types/graph";
 
+const toolbarBtn =
+  "inline-flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-sm font-medium text-foreground shadow-sm hover:bg-muted";
+
 export function GraphPageClient({ graphId }: { graphId: string }) {
+  const router = useRouter();
   const [data, setData] = useState<GraphPayload | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [showCreate, setShowCreate] = useState(false);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+  const [connectingFromId, setConnectingFromId] = useState<string | null>(null);
+  const [menu, setMenu] = useState<{
+    nodeId: string;
+    x: number;
+    y: number;
+  } | null>(null);
 
   const load = useCallback(
     async (opts?: { silent?: boolean }) => {
@@ -57,28 +74,126 @@ export function GraphPageClient({ graphId }: { graphId: string }) {
   const empty = data && data.nodes.length === 0;
   const graphName = data?.graph.name;
 
+  const closeMenu = useCallback(() => setMenu(null), []);
+  const cancelConnect = useCallback(() => setConnectingFromId(null), []);
+
+  const connectToNode = useCallback(
+    async (targetNodeId: string) => {
+      if (!connectingFromId) return;
+      try {
+        const res = await fetch("/api/edges", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            sourceNodeId: connectingFromId,
+            targetNodeId,
+          }),
+        });
+        const body = await res.json();
+        if (!res.ok) {
+          window.alert(body.error ?? "Failed to create connection");
+          return;
+        }
+        setConnectingFromId(null);
+        await load({ silent: true });
+      } catch {
+        window.alert("Network error while creating connection");
+      }
+    },
+    [connectingFromId, load],
+  );
+
+  const deleteNode = useCallback(
+    async (nodeId: string) => {
+      if (!confirm("Delete this node and its contents?")) return;
+      try {
+        const res = await fetch(`/api/nodes/${nodeId}`, { method: "DELETE" });
+        const body = await res.json();
+        if (!res.ok) {
+          window.alert(body.error ?? "Failed to delete node");
+          return;
+        }
+        setSelectedNodeId((current) => (current === nodeId ? null : current));
+        await load({ silent: true });
+      } catch {
+        window.alert("Network error while deleting node");
+      }
+    },
+    [load],
+  );
+
+  const menuItems: ContextMenuItem[] = useMemo(() => {
+    if (!menu) return [];
+    const nodeId = menu.nodeId;
+    return [
+      {
+        type: "item",
+        id: "open",
+        label: "Open",
+        icon: faEye,
+        onSelect: () => setSelectedNodeId(nodeId),
+      },
+      {
+        type: "item",
+        id: "add-connected",
+        label: "Add connected node",
+        icon: faPlus,
+        onSelect: () =>
+          router.push(`/node/new?from=${nodeId}&graphId=${graphId}`),
+      },
+      {
+        type: "item",
+        id: "connect",
+        label: "Connect",
+        icon: faLink,
+        onSelect: () => {
+          setSelectedNodeId(null);
+          setConnectingFromId(nodeId);
+        },
+      },
+      {
+        type: "item",
+        id: "edit",
+        label: "Edit",
+        icon: faPen,
+        onSelect: () => router.push(`/node/${nodeId}`),
+      },
+      { type: "separator" },
+      {
+        type: "item",
+        id: "delete",
+        label: "Delete",
+        icon: faTrash,
+        variant: "danger",
+        onSelect: () => {
+          void deleteNode(nodeId);
+        },
+      },
+    ];
+  }, [deleteNode, graphId, menu, router]);
+
   return (
     <div className="relative flex min-h-0 flex-1 flex-col">
       <div className="absolute right-4 top-4 z-10 flex gap-2">
-        <button
-          type="button"
-          onClick={() => setShowCreate((v) => !v)}
-          className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-sm font-medium text-foreground shadow-sm hover:bg-muted"
+        <Link href={`/node/new?graphId=${graphId}`} className={toolbarBtn}>
+          <FontAwesomeIcon icon={faPlus} />
+          New node
+        </Link>
+        <Link
+          href={`/node/new?graphId=${graphId}&place=1`}
+          className={toolbarBtn}
         >
-          <FontAwesomeIcon icon={showCreate ? faXmark : faPlus} />
-          {showCreate ? "Close" : "New node"}
-        </button>
-        <a
-          href={`/api/graphs/${graphId}/export`}
-          className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-sm font-medium text-foreground shadow-sm hover:bg-muted"
-        >
+          <FontAwesomeIcon icon={faArrowDown} />
+          Drop in
+        </Link>
+        <a href={`/api/graphs/${graphId}/export`} className={toolbarBtn}>
           <FontAwesomeIcon icon={faDownload} />
           Export
         </a>
         <button
           type="button"
           onClick={() => void load()}
-          className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-sm font-medium text-foreground shadow-sm hover:bg-muted"
+          className={toolbarBtn}
         >
           <FontAwesomeIcon icon={faRotate} spin={loading} />
           Refresh
@@ -91,19 +206,6 @@ export function GraphPageClient({ graphId }: { graphId: string }) {
             {graphName}
           </p>
         </div>
-      )}
-
-      {showCreate && (
-        <Card className="absolute left-4 top-16 z-10 w-80">
-          <h2 className="mb-3 text-sm font-semibold">Create node</h2>
-          <CreateNodeForm
-            graphId={graphId}
-            onCreated={() => {
-              setShowCreate(false);
-              void load();
-            }}
-          />
-        </Card>
       )}
 
       {loading && (
@@ -135,9 +237,19 @@ export function GraphPageClient({ graphId }: { graphId: string }) {
               Create a starting node to begin mapping this topic.
             </p>
           </div>
-          <Card className="w-full max-w-sm text-left">
-            <CreateNodeForm graphId={graphId} onCreated={() => void load()} />
-          </Card>
+          <div className="flex flex-wrap items-center justify-center gap-2">
+            <Link href={`/node/new?graphId=${graphId}`} className={toolbarBtn}>
+              <FontAwesomeIcon icon={faPlus} />
+              New node
+            </Link>
+            <Link
+              href={`/node/new?graphId=${graphId}&place=1`}
+              className={toolbarBtn}
+            >
+              <FontAwesomeIcon icon={faArrowDown} />
+              Drop in
+            </Link>
+          </div>
         </div>
       )}
 
@@ -146,8 +258,27 @@ export function GraphPageClient({ graphId }: { graphId: string }) {
           <GraphView
             data={data}
             selectedNodeId={selectedNodeId}
-            onNodeSelect={setSelectedNodeId}
-            onBackgroundClick={() => setSelectedNodeId(null)}
+            connectingFromId={connectingFromId}
+            onNodeSelect={(id) => {
+              closeMenu();
+              setSelectedNodeId(id);
+            }}
+            onBackgroundClick={() => {
+              closeMenu();
+              setSelectedNodeId(null);
+            }}
+            onNodeRightClick={(id, event) => {
+              cancelConnect();
+              setMenu({ nodeId: id, x: event.clientX, y: event.clientY });
+            }}
+            onBackgroundRightClick={() => {
+              cancelConnect();
+              closeMenu();
+            }}
+            onConnectTarget={(id) => {
+              void connectToNode(id);
+            }}
+            onConnectCancel={cancelConnect}
           />
           {selectedNodeId && (
             <NodeSidebar
@@ -155,6 +286,16 @@ export function GraphPageClient({ graphId }: { graphId: string }) {
               nodeId={selectedNodeId}
               onClose={() => setSelectedNodeId(null)}
               onGraphChanged={() => void load({ silent: true })}
+            />
+          )}
+          {menu && (
+            <ContextMenu
+              key={`${menu.nodeId}-${menu.x}-${menu.y}`}
+              x={menu.x}
+              y={menu.y}
+              items={menuItems}
+              onClose={closeMenu}
+              ariaLabel="Node actions"
             />
           )}
         </>

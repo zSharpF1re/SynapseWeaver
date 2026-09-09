@@ -21,6 +21,8 @@ declare module "react-force-graph-2d" {
     d3Force(forceName: string): ForceFn | undefined;
     d3Force(forceName: string, forceFn: ForceFn | null): ForceGraphMethods;
     d3ReheatSimulation(): ForceGraphMethods;
+    graph2ScreenCoords(x: number, y: number): { x: number; y: number };
+    screen2GraphCoords(x: number, y: number): { x: number; y: number };
   };
 
   type ForceGraphProps = {
@@ -41,7 +43,9 @@ declare module "react-force-graph-2d" {
     linkColor?: (link: LinkObject) => string;
     linkWidth?: number | ((link: LinkObject) => number);
     onNodeClick?: (node: NodeObject, event: MouseEvent) => void;
+    onNodeRightClick?: (node: NodeObject, event: MouseEvent) => void;
     onBackgroundClick?: (event: MouseEvent) => void;
+    onBackgroundRightClick?: (event: MouseEvent) => void;
     cooldownTicks?: number;
     enableNodeDrag?: boolean;
     enableZoomInteraction?: boolean;

@@ -2,6 +2,7 @@ import { cosineSimilarity, type StoredNodeVector } from "@/lib/db/vectors";
 
 export const LINK_THRESHOLD = 0.92;
 export const ASK_THRESHOLD = 0.75;
+export const PLACE_THRESHOLD = 0.6;
 
 export type SemanticMatch = {
   id: string;

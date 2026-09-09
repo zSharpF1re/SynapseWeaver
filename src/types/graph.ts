@@ -83,3 +83,13 @@ export type ConfirmResponse = {
   created: ConfirmCreatedNode[];
   linked: ConfirmLinkedEdge[];
 };
+
+export type PlacementStatus = "linked" | "orphan" | "skipped";
+
+export type NodePlacement = {
+  status: PlacementStatus;
+  neighborId?: string;
+  neighborTitle?: string;
+  similarity?: number;
+  edgeId?: string;
+};
