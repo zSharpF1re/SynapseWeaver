@@ -5,18 +5,17 @@
 
 # SynapseWeaver
 
-Guided learning through a knowledge graph: start from a few nodes, add content, and (from M2) expand by discovering related topics. The product is **propose → review → confirm** — the user keeps editorial control.
-
+Guided learning through a knowledge graph: discover what to learn next. 
+<p align="center">
+<img src='screen.png' alt="logo"  align="center">
+</p>
 ## Overview
 
-Milestone 1 delivers:
+When self-studying various topics, the lack of a precise roadmap can hinder learning. You don't know what you don't know, so you just stumble around topics.
 
-- A seeded starter graph (five AI/ML foundation nodes to expand from)
-- Interactive graph view (zoom, pan, drag, click-to-open)
-- Node editing: title/summary plus rich TEXT (TipTap) and DOCUMENT contents
-- Light / dark / system theme via semantic Tailwind tokens
+This app uses AI to suggest you related and contextualized topics. It also lets you write notes directly on the node.
 
-AI generation, dedup, and export land in later milestones.
+This app is inspired by [Obsidian](https://obsidian.md/) and the [Zettelkasten method](https://en.wikipedia.org/wiki/Zettelkasten)
 
 ## Architecture
 
@@ -27,12 +26,6 @@ AI generation, dedup, and export land in later milestones.
 | Data | PostgreSQL + pgvector, Prisma |
 | Files | Vercel Blob; DB keeps only `fileUrl` |
 
-Key paths:
-
-- `src/app/api/` — REST for graph, nodes, contents, upload
-- `src/app/graph/`, `src/app/node/[id]/` — graph and node detail
-- `src/lib/db/`, `src/lib/validation/` — Prisma client and Zod schemas
-- `prisma/schema.prisma` — source of truth for the data model
 
 ## Setup
 
@@ -53,13 +46,18 @@ npm install
 cp .env.example .env.local
 ```
 
-`DATABASE_URL` defaults to the Docker Compose database. `GEMINI_API_KEY` is unused in M1. Create a [Blob store](https://vercel.com/docs/vercel-blob) and copy `BLOB_READ_WRITE_TOKEN` into `.env.local` for uploads and inline images.
+`DATABASE_URL` defaults to the Docker Compose database. Create a [Blob store](https://vercel.com/docs/vercel-blob) and copy `BLOB_READ_WRITE_TOKEN` into `.env.local` for uploads and inline images.
+Get a key on Google AI Studio and copy it into `GEMINI_API_KEY`. 
 
 ### 3. Database
 
 ```bash
 docker compose up -d
 npx prisma migrate deploy
+```
+
+And if you wish to start with some default graphs:
+```bash
 npx prisma db seed
 ```
 
@@ -71,9 +69,4 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000) (redirects to `/graph`).
 
-## Design notes
 
-- **Single implicit graph** — no multi-graph or auth in M1.
-- **Content types** — TEXT and AI_GENERATED (rich TipTap JSON) and DOCUMENT are editable; sparse nodes can use Write with AI to draft a note, then keep or discard it.
-- **Theme** — colors live as CSS variables (`--accent` teal, slate neutrals) so branding can change in one place.
-- **Files** — never stored as blobs in Postgres; only Vercel Blob URLs in `fileUrl`.
