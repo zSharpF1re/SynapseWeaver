@@ -9,6 +9,8 @@ Guided learning through a knowledge graph: discover what to learn next.
 <p align="center">
 <img src='screen.png' alt="screen"  align="center">
 </p>
+
+
 ## Overview
 
 When self-studying various topics, the lack of a precise roadmap can hinder learning. You don't know what you don't know, so you just stumble around topics.
@@ -16,6 +18,9 @@ When self-studying various topics, the lack of a precise roadmap can hinder lear
 This app uses AI to suggest you related and contextualized topics. It also lets you write notes directly on the node.
 
 This app is inspired by [Obsidian](https://obsidian.md/) and the [Zettelkasten method](https://en.wikipedia.org/wiki/Zettelkasten)
+
+**A browser demo is online [Here](https://synapseweaver.vercel.app/)**
+
 
 ## Architecture
 
