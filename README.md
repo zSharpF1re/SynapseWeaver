@@ -7,7 +7,7 @@
 
 Guided learning through a knowledge graph: discover what to learn next. 
 <p align="center">
-<img src='screen.png' alt="logo"  align="center">
+<img src='screen.png' alt="screen"  align="center">
 </p>
 ## Overview
 
